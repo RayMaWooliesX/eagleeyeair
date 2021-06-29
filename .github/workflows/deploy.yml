@@ -1,0 +1,105 @@
+name: deploy
+
+on:
+  push:
+    branches-ignore:
+      - "feature/dependencies"
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    outputs:
+      environ: ${{ steps.setvars.outputs.environ }}
+      gprojectid: ${{ steps.setvars.outputs.gprojectid }}
+    steps:
+      - name: Set variables
+        id: setvars
+        run: |
+          if [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
+            echo '::set-output name=environ::prod'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-prod'
+          elif [[ ${{ github.ref }} == 'refs/heads/hotfix' ]]; then
+            echo '::set-output name=environ::prod'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-prod'
+          elif [[ ${{ github.ref }} == 'refs/heads/release' ]]; then
+            echo '::set-output name=environ::uat'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-uat'
+          elif [[ ${{ github.ref }} == 'refs/heads/integrate' ]]; then
+            echo '::set-output name=environ::test'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-test'
+          elif [[ ${{ github.ref }} == 'refs/heads/develop' ]]; then
+            echo '::set-output name=environ::dev'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-dev'
+          elif [[ ${{ github.ref }} == 'refs/heads/feature/loyaltyapi' ]]; then
+            echo '::set-output name=environ::dev'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-dev'
+          else
+            echo '::set-output name=environ::poc'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-poc-dev'
+          fi
+
+  test_build_and_deploy:
+    runs-on: ubuntu-latest
+    needs: init
+    if: ${{ github.ref }} == 'refs/heads/feature/loyaltyapi'
+    environment:
+      name: ${{ needs.init.outputs.environ }}
+    env:
+      gprojectid: ${{ needs.init.outputs.gprojectid }}
+      VAULT_ADDR: https://vault.${{ needs.init.outputs.environ }}.gcp.api-wr.com:8200
+      gcf_name: wx-p24-loyalty-api-preference-ee-gcf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Get secrets from Vault
+        id: vault
+        uses: hashicorp/vault-action@v2.1.2
+        with:
+          url: ${{ env.VAULT_ADDR }}
+          token: ${{ secrets.VAULT_TOKEN }}
+          tlsSkipVerify: true
+          caCertificate: ${{ secrets.VAULT_CA }}
+          secrets: |
+            kv/data/${{ env.gprojectid }}/GOOGLE_CREDENTIALS GOOGLE_CREDENTIALS ;
+            kv/data/cloud-functions/${{ env.gcf_name }} trigger_topic ;
+            kv/data/cloud-functions/${{ env.gcf_name }} max_function_instances ;
+            kv/data/cloud-functions/${{ env.gcf_name }} ee_api_url ;
+            kv/data/cloud-functions/${{ env.gcf_name }} ee_get_wallet_service_path ;
+            kv/data/cloud-functions/${{ env.gcf_name }} ee_get_consumer_service_path ;
+            kv/data/cloud-functions/${{ env.gcf_name }} ee_update_consumer_service_path ;
+            kv/data/apps/wx-p24-ee-api/credentials user | ee_api_user ;
+            kv/data/apps/wx-p24-ee-api/credentials password | ee_api_password ;
+            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp url | mongodb_url ;
+            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp dbname | mongodb_dbname ;
+            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp collection_cfp_change_status | mongodb_collection ;
+
+      - name: Set up gcloud Cloud SDK environment
+        uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          project_id: ${{ env.gprojectid }}
+          service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
+      - name: Deploy Function
+        run: >-
+          gcloud functions deploy ${{ env.gcf_name }} 
+          --region=australia-southeast1
+          --memory=128MB
+          --runtime=python38
+          --trigger-http 
+          --allow-unauthenticated
+          --entry-point=main 
+          --max-instances=${{ steps.vault.outputs.max_function_instances }}
+          --ingress-settings=internal-only
+          --vpc-connector=wx-p24-store-canonical
+          --egress-settings=all
+          --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
+          --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
+          --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}
+          --set-env-vars ee_api_url=${{ steps.vault.outputs.ee_api_url }}
+          --set-env-vars ee_api_user=${{ steps.vault.outputs.ee_api_user }}
+          --set-env-vars ee_api_password=${{ steps.vault.outputs.ee_api_password }}
+          --set-env-vars ee_get_wallet_service_path=${{ steps.vault.outputs.ee_get_wallet_service_path }}
+          --set-env-vars ee_get_consumer_service_path=${{ steps.vault.outputs.ee_get_consumer_service_path }}
+          --set-env-vars ee_update_consumer_service_path=${{ steps.vault.outputs.ee_update_consumer_service_path }}
+          --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
+          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
+          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
+          --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

@@ -29,6 +29,8 @@ def main(request):
         `timestamp` field contains the publish time.
     """
     envelope = json.loads(request.data.decode('utf-8'))
+    print(envelope)
+    
     message = base64.b64decode(envelope['message'])
     print(message)
     print('Processing message id: {}'.format(message.messageId))

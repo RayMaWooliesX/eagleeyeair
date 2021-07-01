@@ -60,6 +60,8 @@ def main(request):
     update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
     print('updating completed')
 
+    return('200')
+
 def _calling_the_request_consumer_object_function(mode, end_point, header, payload, correlationId):
     '''
     This fucntion will make a call to Eagle Eye API's

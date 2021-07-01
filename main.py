@@ -30,17 +30,18 @@ def main(request):
     """
     envelope = json.loads(request.data.decode('utf-8'))
     print(envelope)
-    
-    message = base64.b64decode(envelope['message'])
+
+    message = envelope['message']
     print(message)
-    print('Processing message id: {}'.format(message.messageId))
-    print('attributs:' + message.attributes)
+
+    print('Processing message id: {}'.format(message["messageId"]))
+    print('attributs:' + message["attributes"])
 
     url = os.environ['ee_api_url']
     authClientId = os.environ['ee_api_user']
     password = os.environ['ee_api_password']
 
-    event_data = json.loads(base64.b64decode(message.data))
+    event_data = json.loads(base64.b64decode(message["data"]))
 
     eventType = event_data['eventType']
     if eventType != 'Change redemptionSetting':

@@ -18,7 +18,7 @@ from pymongo import MongoClient
 import pymongo
 from google.cloud import pubsub_v1
 
-def main(event, context):
+def main(message):
     """Background Cloud Function to be triggered by Pub/Sub.
     Args:
         event (dict):  The dictionary with data specific to this type of
@@ -28,11 +28,16 @@ def main(event, context):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
+
+    print(message)
+    print('Processing message id: {}'.format(message.messageId))
+    print('attributs:' + message.attributes)
+
     url = os.environ['ee_api_url']
     authClientId = os.environ['ee_api_user']
     password = os.environ['ee_api_password']
 
-    event_data = json.loads(base64.b64decode(event['data']))
+    event_data = json.loads(base64.b64decode(message.data))
 
     eventType = event_data['eventType']
     if eventType != 'Change redemptionSetting':
@@ -154,7 +159,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message):
     dbname = os.environ['mongodb_dbname']
     collection = os.environ['mongodb_collection']
     changes_updated = 'false' if status_code >= 300 else 'ture'
-    status_object = {"name": "EE", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": 0, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
+    status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": 0, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
 
     client = MongoClient(url)
     db = client[dbname]

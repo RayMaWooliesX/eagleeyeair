@@ -85,7 +85,9 @@ jobs:
           --allow-unauthenticated
           --entry-point=main 
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
-          --ingress-settings=internal-only
+          --ingress-settings=all
+          --vpc-connector=wx-p24-store-canonical
+          --egress-settings=all
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
           --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
           --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}

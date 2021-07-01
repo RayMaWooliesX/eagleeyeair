@@ -18,7 +18,7 @@ from pymongo import MongoClient
 import pymongo
 from google.cloud import pubsub_v1
 
-def main(message):
+def main(request):
     """Background Cloud Function to be triggered by Pub/Sub.
     Args:
         event (dict):  The dictionary with data specific to this type of
@@ -28,7 +28,8 @@ def main(message):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
-
+    envelope = json.loads(request.data.decode('utf-8'))
+    message = base64.b64decode(envelope['message'])
     print(message)
     print('Processing message id: {}'.format(message.messageId))
     print('attributs:' + message.attributes)

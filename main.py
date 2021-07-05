@@ -79,6 +79,7 @@ def main(request):
         response_code = 200
         client.report_exception()
     except Exception as e:
+        print("-----Other Error-------")
         _logging_in_mongodb( correlationId, '000', e.message)
         _logging_in_deadletter(event_data, e.message)
         logging.error("correlationId: " + correlationId + "; " + e.message)

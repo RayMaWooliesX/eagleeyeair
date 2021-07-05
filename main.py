@@ -117,7 +117,7 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
     end_point = url + service_path
     headers = _get_header(url, service_path, payload, authClientId, password)
 
-    return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, data=payload)
+    return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, payload=payload, correlationId=correlationId)
 
 def _calling_the_request_consumer_object_function(mode, end_point, headers, payload, correlationId):
     '''

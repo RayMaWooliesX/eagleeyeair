@@ -29,6 +29,7 @@ def main(request):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
+    response_code = '200'
     try:
         client = error_reporting.Client()
 
@@ -63,6 +64,7 @@ def main(request):
 
     # unacknowledge the message and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
     except requests.Timeout as e:
+        print("-----Timeout error-------")
         response_code = 429
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
@@ -70,6 +72,7 @@ def main(request):
         client.report_exception()
     # forward data errors to dead letter and log in mongodb without retry by ack the message
     except requests.exceptions.RequestException as e:
+        print("-----Request Error-------")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
         _logging_in_deadletter(event_data, e.response.reason)
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)

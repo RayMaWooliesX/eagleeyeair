@@ -17,6 +17,7 @@ import requests
 from pymongo import MongoClient
 import pymongo
 from google.cloud import pubsub_v1
+from google.cloud import error_reporting
 
 def main(request):
     """Background Cloud Function to be triggered by Pub/Sub.
@@ -29,6 +30,8 @@ def main(request):
         `timestamp` field contains the publish time.
     """
     try:
+        client = error_reporting.Client()
+
         envelope = json.loads(request.data.decode('utf-8'))
         print(envelope)
 
@@ -63,18 +66,18 @@ def main(request):
         response_code = 429
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
-        raise e
+        client.report_exception()
     # forward data errors to dead letter and log in mongodb without retry by ack the message
     except requests.exceptions.RequestException as e:
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
         _logging_in_deadletter(event_data, e.response.reason)
         response_code = 200
-        raise e
+        client.report_exception()
     except Exception as e:
         _logging_in_mongodb( correlationId, '000', e.message)
         _logging_in_deadletter(event_data, e.message)
         response_code = 200
-        raise e
+        client.report_exception()
     finally:
         return response_code
 

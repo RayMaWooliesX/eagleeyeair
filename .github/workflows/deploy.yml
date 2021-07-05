@@ -45,7 +45,7 @@ jobs:
     env:
       gprojectid: ${{ needs.init.outputs.gprojectid }}
       VAULT_ADDR: https://vault.${{ needs.init.outputs.environ }}.gcp.api-wr.com:8200
-      gcf_name: wx-p24-loyalty-api-ee-gcf
+      gcf_name: wx-p24-loyalty-api-preference-ee-gcf
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -79,11 +79,15 @@ jobs:
         run: >-
           gcloud functions deploy ${{ env.gcf_name }} 
           --region=australia-southeast1
-          --memory=128MB
+          --memory=256MB
           --runtime=python38
+          --trigger-http 
+          --allow-unauthenticated
           --entry-point=main 
-          --trigger-topic=${{ steps.vault.outputs.trigger_topic }}
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
+          --ingress-settings=all
+          --vpc-connector=wx-p24-store-canonical
+          --egress-settings=all
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
           --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
           --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}
@@ -97,6 +101,3 @@ jobs:
           --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
           --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com
-          --ingress-settings=internal-only
-          --vpc-connector=wx-p24-store-canonical
-          --egress-settings=all 

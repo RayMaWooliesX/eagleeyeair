@@ -55,30 +55,26 @@ def main(request):
         ##  3. update consumer with new redemption setting
         update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
         print('updating completed')
+
+        response_code = '200'
+
     # unacknowledge the message and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
     except requests.Timeout as e:
+        response_code = 429
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
-            return 429
-        return 429
-    # forward data errors to dead letter and log in mongodb without retry
+        
+    # forward data errors to dead letter and log in mongodb without retry by ack the message
     except requests.exceptions.RequestException as e:
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
-
-        error_publisher_client = pubsub_v1.PublisherClient()
-        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
-                                                            os.environ['error_topic'])
-        user = os.environ['FUNCTION_NAME']
-        future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
-                                                                        user=user,
-                                                                        error = e.response.reason)
-
-        # Wait for the publish future to resolve before exiting.
-        while not future.done():
-            time.sleep(5)
-        return('200')
-
-    return('200')
+        _logging_in_deadletter(event_data, e.response.reason)
+        response_code = 200
+    except Exception as e:
+        _logging_in_mongodb( correlationId, '000', e.message)
+        _logging_in_deadletter(event_data, e.message)
+        response_code = 200
+    finally:
+        return response_code
 
 
 def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
@@ -169,3 +165,15 @@ def _logging_in_mongodb(correlationId, status_code, status_message):
     db = client[dbname]
     col = db[collection]
     results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
+
+def _logging_in_deadletter(event_data, error_message):
+        error_publisher_client = pubsub_v1.PublisherClient()
+        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
+                                                            os.environ['error_topic'])
+        user = os.environ['FUNCTION_NAME']
+        future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
+                                                                        user=user,
+                                                                        error = error_message)
+        # Wait for the publish future to resolve before exiting.
+        while not future.done():
+            time.sleep(5)

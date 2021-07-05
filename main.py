@@ -28,71 +28,62 @@ def main(request):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
-    envelope = json.loads(request.data.decode('utf-8'))
-    print(envelope)
+    try:
+        envelope = json.loads(request.data.decode('utf-8'))
+        print(envelope)
 
-    message = envelope['message']
-    print(message)
+        message = envelope['message']
+        print(message)
 
-    print('Processing message id: {}'.format(message["messageId"]))
-    ## print('attributs:' + message["attributes"])
+        print('Processing message id: {}'.format(message["messageId"]))
+        ## print('attributs:' + message["attributes"])
 
-    url = os.environ['ee_api_url']
-    authClientId = os.environ['ee_api_user']
-    password = os.environ['ee_api_password']
+        url = os.environ['ee_api_url']
+        authClientId = os.environ['ee_api_user']
+        password = os.environ['ee_api_password']
 
-    event_data = json.loads(base64.b64decode(message["data"]))
+        event_data = json.loads(base64.b64decode(message["data"]))
 
-    eventType = event_data['eventType']
-    if eventType != 'Change redemptionSetting':
-        return
+        eventType = event_data['eventType']
+        if eventType != 'Change redemptionSetting':
+            return
 
-    crn = event_data['crn']
-    correlationId = event_data['correlationId']
-    preferences = event_data['preferences']
-    redemptionSetting = preferences['value']
+        crn = event_data['crn']
+        correlationId = event_data['correlationId']
+        preferences = event_data['preferences']
+        redemptionSetting = preferences['value']
 
+        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId)['walletId']
+        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId)['consumerId']
 
-    wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId)['walletId']
-    consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId)['consumerId']
+        ##  3. update consumer with new redemption setting
+        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
+        print('updating completed')
+    # unacknowledge the message and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
+    except requests.Timeout as e:
+        if message.delivery_attempt == 5:
+            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
+            return 429
+        return 429
+    # forward data errors to dead letter and log in mongodb without retry
+    except requests.exceptions.RequestException as e:
+        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
 
-    ##  3. update consumer with new redemption setting
-    update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
-    print('updating completed')
+        error_publisher_client = pubsub_v1.PublisherClient()
+        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
+                                                            os.environ['error_topic'])
+        user = os.environ['FUNCTION_NAME']
+        future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
+                                                                        user=user,
+                                                                        error = e.response.reason)
 
+        # Wait for the publish future to resolve before exiting.
+        while not future.done():
+            time.sleep(5)
+        return('200')
+        
     return('200')
 
-def _calling_the_request_consumer_object_function(mode, end_point, header, payload, correlationId):
-    '''
-    This fucntion will make a call to Eagle Eye API's
-    :param mode: will determine if it is get, Post or Patch
-    :param end_point: End point is the complete URL
-    :param header:  Header is the request header
-    :param payload: payload is the request payload
-    :return: This function will return the response or return Null
-    '''
-
-    response = requests.request(mode, end_point, headers=header, data=payload)
-
-    if response.status_code not in [200, 201]: 
-        print(response.json()) # Printing the error if status codes are not in 200 and 201.
-        logging.error(response.json())
-        response.raise_for_status()
-
-    if mode == 'GET':
-        if (response.status_code == 404):  # expected_response_code
-            return '404'
-        elif response.status_code == 200:
-            return response.json()
-    elif mode == 'PATCH':
-        if (response.status_code == 200):  # expected_response_code
-            return response.json()
-        else:
-            print('Error.... Response code is not 2XX')
-            print(response.json())
-            logging.error(response.json())
-            response.raise_for_status()
-            return 'NULL'
 
 def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''
@@ -129,15 +120,26 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
     end_point = url + service_path
     headers = _get_header(url, service_path, payload, authClientId, password)
 
-    response = requests.request("PATCH", end_point, headers=headers, data=payload)
+    return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, data=payload)
 
-    status_code = response.status_code
-    error_message = response.reason
-    _logging_in_mongodb( correlationId, status_code, error_message)
+def _calling_the_request_consumer_object_function(mode, end_point, header, payload, correlationId):
+    '''
+    This fucntion will make a call to Eagle Eye API's
+    :param mode: will determine if it is get, Post or Patch
+    :param end_point: End point is the complete URL
+    :param header:  Header is the request header
+    :param payload: payload is the request payload
+    :return: This function will return the response or return Null
+    '''
 
-    response.raise_for_status()
+    response = requests.request(mode, end_point, headers=header, data=payload)
 
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    else:
+        logging.error(response.json())
+        response.raise_for_status()
+        return 'NULL'
 
 def _get_header(url, service_path, payload, authClientId, password):
     '''

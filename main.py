@@ -67,20 +67,20 @@ def main(request):
         print("-----Timeout error-------")
         response_code = 429
         if message.delivery_attempt == 5:
-            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
+            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
         client.report_exception()
     # forward data errors to dead letter and log in mongodb without retry by ack the message
     except requests.exceptions.RequestException as e:
         print("-----Request Error-------")
-        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason)
+        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         _logging_in_deadletter(event_data, e.response.reason)
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
         response_code = 200
         client.report_exception()
     except Exception as e:
         print("-----Other Error-------")
-        _logging_in_mongodb( correlationId, '000', e.message)
+        _logging_in_mongodb( correlationId, '000', e.message, 0)
         _logging_in_deadletter(event_data, e.message)
         logging.error("correlationId: " + correlationId + "; " + e.message)
         response_code = 200
@@ -166,12 +166,12 @@ def _get_header(url, service_path, payload, authClientId, password):
               "Content-Type": "application/json"}
     return header
 
-def _logging_in_mongodb(correlationId, status_code, status_message):
+def _logging_in_mongodb(correlationId, status_code, status_message, retried_count):
     url = os.environ['mongodb_url']
     dbname = os.environ['mongodb_dbname']
     collection = os.environ['mongodb_collection']
     changes_updated = 'false' if status_code >= 300 else 'ture'
-    status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": 0, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
+    status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
 
     client = MongoClient(url)
     db = client[dbname]

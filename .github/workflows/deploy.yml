@@ -70,6 +70,7 @@ jobs:
             kv/data/mongodbatlas/wx-p24-loyalty-api-cfp url | mongodb_url ;
             kv/data/mongodbatlas/wx-p24-loyalty-api-cfp dbname | mongodb_dbname ;
             kv/data/mongodbatlas/wx-p24-loyalty-api-cfp collection_cfp_change_status | mongodb_collection ;
+            kv/data/cloud-functions/${{ env.gcf_name }} error_topic ;
       - name: Set up gcloud Cloud SDK environment
         uses: google-github-actions/setup-gcloud@v0.2.0
         with:
@@ -97,6 +98,7 @@ jobs:
           --set-env-vars ee_get_wallet_service_path=${{ steps.vault.outputs.ee_get_wallet_service_path }}
           --set-env-vars ee_get_consumer_service_path=${{ steps.vault.outputs.ee_get_consumer_service_path }}
           --set-env-vars ee_update_consumer_service_path=${{ steps.vault.outputs.ee_update_consumer_service_path }}
+          --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
           --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
           --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
           --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}

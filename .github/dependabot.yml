@@ -1,19 +1,7 @@
 version: 2
 updates:
-  - package-ecosystem: npm
+  - package-ecosystem: pip
     directory: "/"
-    # GitHub dependabot doesn't support this yet
-    # automerged_updates:
-    #   - match:
-    #       dependency_type: "development"
-    #       # Supported dependency types:
-    #       # - "development"
-    #       # - "production"
-    #       # - "all"
-    #       update_type: "all"
-    #   - match:
-    #       dependency_type: "production"
-    #       update_type: "semver:patch"
     schedule:
       interval: daily
       time: "10:00"

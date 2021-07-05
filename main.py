@@ -44,10 +44,6 @@ def main(request):
 
         event_data = json.loads(base64.b64decode(message["data"]))
 
-        eventType = event_data['eventType']
-        if eventType != 'Change redemptionSetting':
-            return
-
         crn = event_data['crn']
         correlationId = event_data['correlationId']
         preferences = event_data['preferences']
@@ -81,7 +77,7 @@ def main(request):
         while not future.done():
             time.sleep(5)
         return('200')
-        
+
     return('200')
 
 

@@ -34,7 +34,6 @@ def main(request):
         client = error_reporting.Client()
 
         envelope = json.loads(request.data.decode('utf-8'))
-        print(envelope)
 
         message = envelope['message']
 
@@ -185,3 +184,5 @@ def _logging_in_deadletter(event_data, error_message):
         # Wait for the publish future to resolve before exiting.
         while not future.done():
             time.sleep(5)
+        
+        print(print(future.result()))

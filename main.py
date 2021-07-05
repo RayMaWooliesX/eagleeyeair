@@ -37,10 +37,6 @@ def main(request):
         print(envelope)
 
         message = envelope['message']
-        print(message)
-
-        print('Processing message id: {}'.format(message["messageId"]))
-        ## print('attributs:' + message["attributes"])
 
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']

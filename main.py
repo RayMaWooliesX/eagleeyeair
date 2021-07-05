@@ -118,7 +118,7 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
 
     return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, data=payload)
 
-def _calling_the_request_consumer_object_function(mode, end_point, header, payload, correlationId):
+def _calling_the_request_consumer_object_function(mode, end_point, headers, payload, correlationId):
     '''
     This fucntion will make a call to Eagle Eye API's
     :param mode: will determine if it is get, Post or Patch
@@ -128,7 +128,7 @@ def _calling_the_request_consumer_object_function(mode, end_point, header, paylo
     :return: This function will return the response or return Null
     '''
 
-    response = requests.request(mode, end_point, headers=header, data=payload)
+    response = requests.request(mode, end_point, headers=headers, data=payload)
 
     if response.status_code == 200:
         return response.json()

@@ -17,8 +17,9 @@ import requests
 from pymongo import MongoClient
 import pymongo
 from google.cloud import pubsub_v1
+from google.cloud import error_reporting
 
-def main(message):
+def main(request):
     """Background Cloud Function to be triggered by Pub/Sub.
     Args:
         event (dict):  The dictionary with data specific to this type of
@@ -28,65 +29,61 @@ def main(message):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
+    response_code = '200'
+    try:
+        client = error_reporting.Client()
 
-    print(message)
-    print('Processing message id: {}'.format(message.messageId))
-    print('attributs:' + message.attributes)
+        envelope = json.loads(request.data.decode('utf-8'))
+        print(envelope)
 
-    url = os.environ['ee_api_url']
-    authClientId = os.environ['ee_api_user']
-    password = os.environ['ee_api_password']
+        message = envelope['message']
 
-    event_data = json.loads(base64.b64decode(message.data))
+        url = os.environ['ee_api_url']
+        authClientId = os.environ['ee_api_user']
+        password = os.environ['ee_api_password']
 
-    eventType = event_data['eventType']
-    if eventType != 'Change redemptionSetting':
-        return
+        event_data = json.loads(base64.b64decode(message["data"]))
 
-    crn = event_data['crn']
-    correlationId = event_data['correlationId']
-    preferences = event_data['preferences']
-    redemptionSetting = preferences['value']
+        crn = event_data['crn']
+        correlationId = event_data['correlationId']
+        preferences = event_data['preferences']
+        redemptionSetting = preferences['value']
 
+        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId)['walletId']
+        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId)['consumerId']
 
-    wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId)['walletId']
-    consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId)['consumerId']
+        ##  3. update consumer with new redemption setting
+        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
+        print('updating completed')
 
-    ##  3. update consumer with new redemption setting
-    update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
-    print('updating completed')
+        response_code = '200'
 
-def _calling_the_request_consumer_object_function(mode, end_point, header, payload, correlationId):
-    '''
-    This fucntion will make a call to Eagle Eye API's
-    :param mode: will determine if it is get, Post or Patch
-    :param end_point: End point is the complete URL
-    :param header:  Header is the request header
-    :param payload: payload is the request payload
-    :return: This function will return the response or return Null
-    '''
+    # unacknowledge the message and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
+    except requests.Timeout as e:
+        print("-----Timeout error-------")
+        response_code = 429
+        if message.delivery_attempt == 5:
+            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
+        logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
+        client.report_exception()
+    # forward data errors to dead letter and log in mongodb without retry by ack the message
+    except requests.exceptions.RequestException as e:
+        print("-----Request Error-------")
+        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
+        _logging_in_deadletter(event_data, e.response.reason)
+        logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
+        response_code = 200
+        client.report_exception()
+    except Exception as e:
+        print("-----Other Error-------")
+        _logging_in_mongodb( correlationId, '000', e.message, 0)
+        _logging_in_deadletter(event_data, e.message)
+        logging.error("correlationId: " + correlationId + "; " + e.message)
+        response_code = 200
+        client.report_exception()
+    finally:
+        return response_code
 
-    response = requests.request(mode, end_point, headers=header, data=payload)
-
-    if response.status_code not in [200, 201]: 
-        print(response.json()) # Printing the error if status codes are not in 200 and 201.
-        logging.error(response.json())
-        response.raise_for_status()
-
-    if mode == 'GET':
-        if (response.status_code == 404):  # expected_response_code
-            return '404'
-        elif response.status_code == 200:
-            return response.json()
-    elif mode == 'PATCH':
-        if (response.status_code == 200):  # expected_response_code
-            return response.json()
-        else:
-            print('Error.... Response code is not 2XX')
-            print(response.json())
-            logging.error(response.json())
-            response.raise_for_status()
-            return 'NULL'
 
 def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''
@@ -123,15 +120,26 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
     end_point = url + service_path
     headers = _get_header(url, service_path, payload, authClientId, password)
 
-    response = requests.request("PATCH", end_point, headers=headers, data=payload)
+    return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, payload=payload, correlationId=correlationId)
 
-    status_code = response.status_code
-    error_message = response.reason
-    _logging_in_mongodb( correlationId, status_code, error_message)
+def _calling_the_request_consumer_object_function(mode, end_point, headers, payload, correlationId):
+    '''
+    This fucntion will make a call to Eagle Eye API's
+    :param mode: will determine if it is get, Post or Patch
+    :param end_point: End point is the complete URL
+    :param header:  Header is the request header
+    :param payload: payload is the request payload
+    :return: This function will return the response or return Null
+    '''
 
-    response.raise_for_status()
+    response = requests.request(mode, end_point, headers=headers, data=payload)
 
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    else:
+        logging.error(response.json())
+        response.raise_for_status()
+        return 'NULL'
 
 def _get_header(url, service_path, payload, authClientId, password):
     '''
@@ -154,14 +162,26 @@ def _get_header(url, service_path, payload, authClientId, password):
               "Content-Type": "application/json"}
     return header
 
-def _logging_in_mongodb(correlationId, status_code, status_message):
+def _logging_in_mongodb(correlationId, status_code, status_message, retried_count):
     url = os.environ['mongodb_url']
     dbname = os.environ['mongodb_dbname']
     collection = os.environ['mongodb_collection']
     changes_updated = 'false' if status_code >= 300 else 'ture'
-    status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": 0, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
+    status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
 
     client = MongoClient(url)
     db = client[dbname]
     col = db[collection]
     results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
+
+def _logging_in_deadletter(event_data, error_message):
+        error_publisher_client = pubsub_v1.PublisherClient()
+        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
+                                                            os.environ['error_topic'])
+        user = os.environ['FUNCTION_NAME']
+        future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
+                                                                        user=user,
+                                                                        error = error_message)
+        # Wait for the publish future to resolve before exiting.
+        while not future.done():
+            time.sleep(5)

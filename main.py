@@ -75,8 +75,6 @@ def main(request):
         print(error_msg)
         logging.error(error_msg)
         print("client: " + client.project)
-        print("credentials: ")
-        print(client.credentials.Credentials().token)
         print("service: ")
         print(client.service)
         print("client_info: ")

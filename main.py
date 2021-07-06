@@ -64,6 +64,10 @@ def main(request):
     # forward data errors to dead letter and log in mongodb without retry by ack the message
     except requests.exceptions.RequestException as e:
         print("-----Request Error-------")
+        print(correlationId)
+        print(e.response.status_code)
+        print(e.response.reason)
+        logging.error("logging error")
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
         client.report_exception()
         _logging_in_deadletter(event_data, e.response.reason)

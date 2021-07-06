@@ -30,6 +30,8 @@ def main(request):
     """
     response_code = '200'
     try:
+        _logging_in_deadletter("test message", "Test")
+        
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
 

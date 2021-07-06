@@ -39,7 +39,8 @@ def main(request):
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
 
-        event_data = json.loads(base64.b64decode(message["data"]))
+        event_data_str = base64.b64decode(message["data"])
+        event_data = json.loads(event_data_str)
         crn = event_data['crn']
         correlationId = event_data['correlationId']
         preferences = event_data['preferences']
@@ -72,9 +73,9 @@ def main(request):
         # client = error_reporting.Client()
         # print("client: " + client.project)
         # client.report_exception()
-        print(event_data)
+        print(event_data_str)
         print(e.response.reason)
-        _logging_in_deadletter(event_data, e.response.reason)
+        _logging_in_deadletter(event_data_str, e.response.reason)
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         print("after mongodb")

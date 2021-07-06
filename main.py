@@ -31,6 +31,9 @@ def main(request):
     response_code = '200'
     try:
         client = error_reporting.Client()
+
+        print("client" + client.project)
+
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
 

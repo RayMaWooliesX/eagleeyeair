@@ -192,7 +192,7 @@ def _logging_in_deadletter(event_data, error_message):
     print(os.environ['GCP_PROJECT'])
     print(os.environ['error_topic'])
     print(user)
-    future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
+    future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8") ,
                                                                     user=user,
                                                                     error = error_message)
     print("after future")

@@ -73,9 +73,9 @@ def main(request):
         # client = error_reporting.Client()
         # print("client: " + client.project)
         # client.report_exception()
-        print(event_data_str.decode('utf-8'))
+        print(event_data_str)
         print(e.response.reason)
-        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
+        _logging_in_deadletter(event_data_str, e.response.reason)
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         print("after mongodb")
@@ -193,7 +193,7 @@ def _logging_in_deadletter(event_data, error_message):
     print(os.environ['GCP_PROJECT'])
     print(os.environ['error_topic'])
     print(user)
-    future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8") ,
+    future = error_publisher_client.publish(error_topic_path, event_data ,
                                                                     user=user,
                                                                     error = error_message)
     print("after future")

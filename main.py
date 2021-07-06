@@ -80,14 +80,15 @@ def main(request):
         print("after mongodb")
         response_code = 200
     except Exception as e:
-        print("-----Other Error-------")
-        logging.error("correlationId: " + correlationId + "; " + e.message)
-        client = error_reporting.Client()
-        print("client: " + client.project)
-        client.report_exception()
-        _logging_in_deadletter(event_data, e.message)
-        _logging_in_mongodb( correlationId, '000', e.message, 0)
-        response_code = 200
+        raise e
+        # print("-----Other Error-------")
+        # logging.error("correlationId: " + correlationId + "; " + e.message)
+        # client = error_reporting.Client()
+        # print("client: " + client.project)
+        # client.report_exception()
+        # _logging_in_deadletter(event_data, e.message)
+        # _logging_in_mongodb( correlationId, '000', e.message, 0)
+        # response_code = 200
     finally:
         return response_code
 

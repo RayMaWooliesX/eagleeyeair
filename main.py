@@ -32,7 +32,7 @@ def main(request):
     try:
         client = error_reporting.Client()
 
-        print("client" + client.project)
+        print("client: " + client.project)
 
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
@@ -74,6 +74,10 @@ def main(request):
         error_msg = "correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason
         print(error_msg)
         logging.error(error_msg)
+        print("client: " + client.project)
+        print("client: " + client.credentials)
+        print("client: " + client.service)
+        print("client: " + client.client_info)
         client.report("Request Error!")
         client.report_exception()
         print("after report exception")

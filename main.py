@@ -71,6 +71,7 @@ def main(request):
         error_msg = "correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason
         print(error_msg)
         logging.error(error_msg)
+        client.report("Request Error!")
         client.report_exception()
         print("after report exception")
         _logging_in_deadletter(event_data, e.response.reason)

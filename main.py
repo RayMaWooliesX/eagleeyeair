@@ -56,26 +56,26 @@ def main(request):
     # return 429 and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
     except requests.Timeout as e:
         print("-----Timeout error-------")
+        client.report_exception()
         response_code = 429
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
-        client.report_exception()
     # forward data errors to dead letter and log in mongodb without retry by ack the message
     except requests.exceptions.RequestException as e:
         print("-----Request Error-------")
+        client.report_exception()
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         _logging_in_deadletter(event_data, e.response.reason)
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
         response_code = 200
-        client.report_exception()
     except Exception as e:
         print("-----Other Error-------")
+        client.report_exception()
         _logging_in_mongodb( correlationId, '000', e.message, 0)
         _logging_in_deadletter(event_data, e.message)
         logging.error("correlationId: " + correlationId + "; " + e.message)
         response_code = 200
-        client.report_exception()
     finally:
         return response_code
 

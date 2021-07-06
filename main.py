@@ -15,7 +15,6 @@ import json
 import logging
 import requests
 from pymongo import MongoClient
-import pymongo
 from google.cloud import pubsub_v1
 from google.cloud import error_reporting
 
@@ -32,9 +31,7 @@ def main(request):
     response_code = '200'
     try:
         client = error_reporting.Client()
-
         envelope = json.loads(request.data.decode('utf-8'))
-
         message = envelope['message']
 
         url = os.environ['ee_api_url']
@@ -42,7 +39,6 @@ def main(request):
         password = os.environ['ee_api_password']
 
         event_data = json.loads(base64.b64decode(message["data"]))
-
         crn = event_data['crn']
         correlationId = event_data['correlationId']
         preferences = event_data['preferences']
@@ -57,7 +53,7 @@ def main(request):
 
         response_code = '200'
 
-    # unacknowledge the message and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
+    # return 429 and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
     except requests.Timeout as e:
         print("-----Timeout error-------")
         response_code = 429
@@ -82,7 +78,6 @@ def main(request):
         client.report_exception()
     finally:
         return response_code
-
 
 def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''
@@ -123,14 +118,13 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
 
 def _calling_the_request_consumer_object_function(mode, end_point, headers, payload, correlationId):
     '''
-    This fucntion will make a call to Eagle Eye API's
+    This function will make a call to Eagle Eye API's
     :param mode: will determine if it is get, Post or Patch
     :param end_point: End point is the complete URL
     :param header:  Header is the request header
     :param payload: payload is the request payload
     :return: This function will return the response or return Null
     '''
-
     response = requests.request(mode, end_point, headers=headers, data=payload)
 
     if response.status_code == 200:
@@ -142,7 +136,7 @@ def _calling_the_request_consumer_object_function(mode, end_point, headers, payl
 
 def _get_header(url, service_path, payload, authClientId, password):
     '''
-    This funtion will prepare the header based on the parameters
+    This function will prepare the header based on the parameters
     :param url:
     :param service_path:
     :param transaction_id:
@@ -162,27 +156,32 @@ def _get_header(url, service_path, payload, authClientId, password):
     return header
 
 def _logging_in_mongodb(correlationId, status_code, status_message, retried_count):
+    print("Starting logging in mongodb")
     url = os.environ['mongodb_url']
     dbname = os.environ['mongodb_dbname']
     collection = os.environ['mongodb_collection']
-    changes_updated = 'false' if status_code >= 300 else 'ture'
+    changes_updated = 'false' if status_code >= 300 else 'true'
     status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
 
     client = MongoClient(url)
     db = client[dbname]
     col = db[collection]
     results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
+    print(results.modified_count + " records modified in mongodb.")
+    print("Completed logging in mongodb")
 
 def _logging_in_deadletter(event_data, error_message):
-        error_publisher_client = pubsub_v1.PublisherClient()
-        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
-                                                            os.environ['error_topic'])
-        user = os.environ['FUNCTION_NAME']
-        future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
-                                                                        user=user,
-                                                                        error = error_message)
-        # Wait for the publish future to resolve before exiting.
-        while not future.done():
-            time.sleep(5)
-        
-        print(print(future.result()))
+    print("Starting logging to dead letter topic")
+    error_publisher_client = pubsub_v1.PublisherClient()
+    error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
+                                                        os.environ['error_topic'])
+    user = os.environ['FUNCTION_NAME']
+    future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
+                                                                    user=user,
+                                                                    error = error_message)
+    # Wait for the publish future to resolve before exiting.
+    while not future.done():
+        time.sleep(1)
+    
+    print(print(future.result()))
+    print("Completed logging to dead letter topic")

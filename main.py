@@ -70,6 +70,8 @@ def main(request):
         # client = error_reporting.Client()
         # print("client: " + client.project)
         # client.report_exception()
+        print(event_data)
+        print(e.response.reason)
         _logging_in_deadletter(event_data, e.response.reason)
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
@@ -190,7 +192,9 @@ def _logging_in_deadletter(event_data, error_message):
     future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
                                                                     user=user,
                                                                     error = error_message)
+    print("after future")
     print(future.result())
+    print("after future results")
     # Wait for the publish future to resolve before exiting.
     while not future.done():
         time.sleep(1)

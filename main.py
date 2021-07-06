@@ -184,9 +184,13 @@ def _logging_in_deadletter(event_data, error_message):
     error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
                                                         os.environ['error_topic'])
     user = os.environ['FUNCTION_NAME']
+    print(os.environ['GCP_PROJECT'])
+    print(os.environ['error_topic'])
+    print(user)
     future = error_publisher_client.publish(error_topic_path, base64.b64decode(event_data) ,
                                                                     user=user,
                                                                     error = error_message)
+    print(future.result())
     # Wait for the publish future to resolve before exiting.
     while not future.done():
         time.sleep(1)

@@ -68,7 +68,9 @@ def main(request):
         print(e.response.status_code)
         print(e.response.reason)
         logging.error("logging error")
-        logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
+        error_msg = "correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason
+        print(error_msg)
+        logging.error(error_msg)
         client.report_exception()
         _logging_in_deadletter(event_data, e.response.reason)
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)

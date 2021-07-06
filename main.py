@@ -72,8 +72,11 @@ def main(request):
         print(error_msg)
         logging.error(error_msg)
         client.report_exception()
+        print("after report exception")
         _logging_in_deadletter(event_data, e.response.reason)
+        print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
+        print("after mongodb")
         response_code = 200
     except Exception as e:
         print("-----Other Error-------")

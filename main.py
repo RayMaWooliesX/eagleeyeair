@@ -67,9 +67,9 @@ def main(request):
         print("-----Request Error-------")
         error_msg = "correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason
         logging.error(error_msg)
-        client = error_reporting.Client()
-        print("client: " + client.project)
-        client.report_exception()
+        # client = error_reporting.Client()
+        # print("client: " + client.project)
+        # client.report_exception()
         _logging_in_deadletter(event_data, e.response.reason)
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)

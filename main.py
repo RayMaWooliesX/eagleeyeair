@@ -30,10 +30,6 @@ def main(request):
     """
     response_code = '200'
     try:
-        client = error_reporting.Client()
-
-        print("client: " + client.project)
-
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
 
@@ -60,6 +56,8 @@ def main(request):
     except requests.Timeout as e:
         print("-----Timeout error-------")
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
+        client = error_reporting.Client()
+        print("client: " + client.project)
         client.report_exception()
         response_code = 429
         if message.delivery_attempt == 5:
@@ -69,7 +67,9 @@ def main(request):
         print("-----Request Error-------")
         error_msg = "correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason
         logging.error(error_msg)
-        # client.report_exception()
+        client = error_reporting.Client()
+        print("client: " + client.project)
+        client.report_exception()
         _logging_in_deadletter(event_data, e.response.reason)
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
@@ -78,6 +78,8 @@ def main(request):
     except Exception as e:
         print("-----Other Error-------")
         logging.error("correlationId: " + correlationId + "; " + e.message)
+        client = error_reporting.Client()
+        print("client: " + client.project)
         client.report_exception()
         _logging_in_deadletter(event_data, e.message)
         _logging_in_mongodb( correlationId, '000', e.message, 0)

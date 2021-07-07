@@ -60,7 +60,7 @@ def main(request):
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
     except requests.Timeout as e:
         response_code = '500'
-        print("Timeout error")
+        logging.error(RuntimeError("Timeout error"))
         print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
         print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
@@ -70,7 +70,7 @@ def main(request):
 
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
-        print("Request error: ")
+        logging.error(RuntimeError("Request error: "))
         print("correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
         print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
@@ -80,8 +80,8 @@ def main(request):
 
     except Exception as e:
         response_code = '200'
-        logging.error(RuntimeError('Data error or any non-request error:'))
-        error_msg = e.args + "," + e.__doc__
+        logging.error(RuntimeError('Data error:'))
+        error_msg = ','.join(e.args) + "," + e.__doc__
         logging.error(RuntimeError(error_msg))
         print(traceback.format_exc())
         error_client.report_exception()
@@ -181,7 +181,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
 
         print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")
     except Exception as e:
-        print("!!! There was an error while logging in mongodb. " + "Error message.")
+        logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
         print(traceback.format_exc())
         pass
 
@@ -200,6 +200,6 @@ def _logging_in_deadletter(event_data, error_message):
             time.sleep(1)
         print("---Logging original message to dead letter topic completed.")
     except Exception as e:
-        print("!!! There was an error while sending error message to dead letter topic. " + "Error message: " + e.message)
+        logging.error(RuntimeError("!!! There was an error while sending error message to dead letter topic. " ))
         print(traceback.format_exc())
         pass

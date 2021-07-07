@@ -54,7 +54,12 @@ def main(request):
         print('Updating completed.')
         response_code = '200'
 
-        _logging_in_mongodb(event_data['correlationId'], '200', 'OK', delivery_attempt)
+        try:
+            _logging_in_mongodb(event_data['correlationId'], '200', 'OK', delivery_attempt)
+        except Exception as e:
+            logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
+            print(traceback.format_exc())
+            pass
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
     except requests.Timeout as e:

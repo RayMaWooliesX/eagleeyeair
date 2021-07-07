@@ -56,8 +56,8 @@ def main(request):
 
         print("Logging in mongodb")
         print(correlationId)
-        print(message.delivery_attempt)
-        _logging_in_mongodb(correlationId, '200', 'OK', message.delivery_attempt)
+        print(message.deliveryAttempt)
+        _logging_in_mongodb(correlationId, '200', 'OK', message.deliveryAttempt)
         print("Logging in mongodb completed.")
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
@@ -66,8 +66,8 @@ def main(request):
         print("Timeout error")
         print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-        if message.delivery_attempt == 5:
-            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
+        if message.deliveryAttempt == 5:
+            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.deliveryAttempt)
         print("Timeout error logging completed.")
 
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message

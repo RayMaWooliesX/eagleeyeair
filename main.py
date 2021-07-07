@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 import pytz
 import json
 import logging
+import traceback
 import requests
 from pymongo import MongoClient
 from google.cloud import pubsub_v1
@@ -67,7 +68,7 @@ def main(request):
         print("Timeout error")
         print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-        if message.deliveryAttempt == 5:
+        if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, delivery_attempt)
         print("Timeout error logging completed.")
 
@@ -173,7 +174,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         url = os.environ['mongodb_url']
         dbname = os.environ['mongodb_dbname']
         collection = os.environ['mongodb_collection']
-        changes_updated = 'false' if status_code >= 300 else 'true'
+        changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
         client = MongoClient(url)
         db = client[dbname]
@@ -182,7 +183,8 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
 
         print("---Logging in mongodb completed," + results.modified_count + " records logged.")
     except Exception as e:
-        print("!!! There was an error while logging in mongodb. " + "Error message: " + e.message)
+        print("!!! There was an error while logging in mongodb. " + "Error message.")
+        print(traceback.format_exc())
         pass
 
 def _logging_in_deadletter(event_data, error_message):

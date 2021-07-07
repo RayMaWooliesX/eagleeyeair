@@ -81,7 +81,6 @@ def main(request):
     except Exception as e:
         response_code = '200'
         print("Data error or any types of error: ")
-        print("--correlationId: " + correlationId)
         print(traceback.format_exc())
         print(e.message)
         print(e.expression)

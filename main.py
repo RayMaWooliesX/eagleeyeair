@@ -37,6 +37,7 @@ def main(request):
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
         envelope = json.loads(request.data.decode('utf-8'))
+        logging.log(envelope)
         message = envelope['message']
         event_data_str = base64.b64decode(message["data"])
         event_data = json.loads(event_data_str)
@@ -63,25 +64,25 @@ def main(request):
     except requests.Timeout as e:
         response_code = '500'
         print("Timeout error")
-        logging.error("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
+        print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
-        logging.error("Timeout error logging completed.")
+        print("Timeout error logging completed.")
 
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
         print("Http error: ")
-        logging.error("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
+        print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 1)
-        logging.error("Http error logging completed.")
+        print("Http error logging completed.")
 
     except Exception as e:
         response_code = '200'
         print("Data error: ")
-        logging.error("--correlationId: " + correlationId + "; " + e.message)
+        print("--correlationId: " + correlationId + "; " + e.message)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str, e.message)
         _logging_in_mongodb( correlationId, '500', e.message, 1)
@@ -139,7 +140,7 @@ def _calling_the_request_consumer_object_function(mode, end_point, headers, payl
     if response.status_code == 200:
         return response.json()
     else:
-        logging.error(response.json())
+        print(response.json())
         response.raise_for_status()
         return 'NULL'
 

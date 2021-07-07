@@ -30,8 +30,7 @@ def main(request):
     """
     response_code = '200'
     try:
-        _logging_in_deadletter("test message", "Test")
-        
+        client = error_reporting.Client()
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
 
@@ -79,7 +78,6 @@ def main(request):
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         print("after mongodb")
-        client = error_reporting.Client()
         print("error reporting client: " + client.project)
         client.report_exception()
         print("after error reporting report exception")

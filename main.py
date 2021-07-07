@@ -55,10 +55,8 @@ def main(request):
 
         print("Logging in mongodb")
         print(correlationId)
-        print(update_response.status_code)
-        print(update_response.reason)
         print(message.delivery_attempt)
-        _logging_in_mongodb( correlationId, update_response.status_code, update_response.reason, message.delivery_attempt)
+        _logging_in_mongodb(correlationId, '200', 'OK', message.delivery_attempt)
         print("Logging in mongodb completed.")
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry

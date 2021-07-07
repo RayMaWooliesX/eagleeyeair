@@ -39,6 +39,7 @@ def main(request):
         envelope = json.loads(request.data.decode('utf-8'))
         print(envelope)
         message = envelope['message']
+        delivery_attempt = envelope['deliveryAttempt']
         event_data_str = base64.b64decode(message["data"])
         event_data = json.loads(event_data_str)
         crn = event_data['crn']
@@ -56,8 +57,8 @@ def main(request):
 
         print("Logging in mongodb")
         print(correlationId)
-        print(message.deliveryAttempt)
-        _logging_in_mongodb(correlationId, '200', 'OK', message.deliveryAttempt)
+        print(delivery_attempt)
+        _logging_in_mongodb(correlationId, '200', 'OK', delivery_attempt)
         print("Logging in mongodb completed.")
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
@@ -67,7 +68,7 @@ def main(request):
         print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.deliveryAttempt == 5:
-            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.deliveryAttempt)
+            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, delivery_attempt)
         print("Timeout error logging completed.")
 
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
@@ -76,7 +77,7 @@ def main(request):
         print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 1)
+        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, delivery_attempt)
         print("Http error logging completed.")
 
     except Exception as e:
@@ -85,7 +86,7 @@ def main(request):
         print("--correlationId: " + correlationId + "; " + e.message)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str, e.message)
-        _logging_in_mongodb( correlationId, '500', e.message, 1)
+        _logging_in_mongodb( correlationId, '500', e.message, delivery_attempt)
 
     finally:
         return response_code

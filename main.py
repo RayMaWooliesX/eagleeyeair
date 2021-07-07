@@ -85,7 +85,7 @@ def main(request):
         logging.error(RuntimeError(error_msg))
         print(traceback.format_exc())
         error_client.report_exception()
-        _logging_in_deadletter(event_data_str, error_msg)
+        _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
         _logging_in_mongodb( correlationId, '500', error_msg, delivery_attempt)
 
     finally:

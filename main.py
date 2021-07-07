@@ -43,39 +43,38 @@ def main(request):
         event_data_str = base64.b64decode(message["data"])
         event_data = json.loads(event_data_str)
         crn = event_data['crn']
-        correlationId = event_data['correlationId']
         preferences = event_data['preferences']
         redemptionSetting = preferences['value']
         print("Data preparation completed.")
 
         print("Calling EE APIs to update consumer preference.")
-        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId)['walletId']
-        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId)['consumerId']
-        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
+        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, event_data['correlationId'])['walletId']
+        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, event_data['correlationId'])['consumerId']
+        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, event_data['correlationId'])
         print('Updating completed.')
         response_code = '200'
 
-        _logging_in_mongodb(correlationId, '200', 'OK', delivery_attempt)
+        _logging_in_mongodb(event_data['correlationId'], '200', 'OK', delivery_attempt)
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
     except requests.Timeout as e:
         response_code = '500'
         logging.error(RuntimeError("Timeout error"))
-        print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
+        print("-- correlationId: " + event_data['correlationId'] + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
         print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.delivery_attempt == 5:
-            _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Timeout error logging completed.")
 
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
         logging.error(RuntimeError("Request error: "))
-        print("correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
+        print("correlationId: " + event_data['correlationId'] + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
         print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
-        _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+        _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Request error logging completed.")
 
     except Exception as e:
@@ -86,8 +85,8 @@ def main(request):
         print(traceback.format_exc())
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
-        if correlationId:
-            _logging_in_mongodb( correlationId, '400', error_msg, delivery_attempt)
+        if event_data['correlationId']:
+            _logging_in_mongodb( event_data['correlationId'], '400', error_msg, delivery_attempt)
 
     finally:
         return response_code

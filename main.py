@@ -64,7 +64,7 @@ def main(request):
         print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.delivery_attempt == 5:
-            _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, delivery_attempt)
+            _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Timeout error logging completed.")
 
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
@@ -74,11 +74,11 @@ def main(request):
         print(e.response.status_code)
         print(e.response.reason)
         print(e.response.text)
-        print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
+        print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, delivery_attempt)
+        _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Http error logging completed.")
 
     except Exception as e:

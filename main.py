@@ -62,7 +62,7 @@ def main(request):
         client = error_reporting.Client()
         print("client: " + client.project)
         client.report_exception()
-        response_code = 429
+        response_code = '429'
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
     # forward data errors to dead letter and log in mongodb without retry by ack the message
@@ -79,7 +79,11 @@ def main(request):
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         print("after mongodb")
-        response_code = 200
+        client = error_reporting.Client()
+        print("error reporting client: " + client.project)
+        client.report_exception()
+        print("after error reporting report exception")
+        response_code = '200'
     except Exception as e:
         raise e
         # print("-----Other Error-------")

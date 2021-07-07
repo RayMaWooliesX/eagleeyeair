@@ -38,7 +38,6 @@ def main(request):
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
         envelope = json.loads(request.data.decode('utf-8'))
-        print(envelope)
         message = envelope['message']
         delivery_attempt = envelope['deliveryAttempt']
         event_data_str = base64.b64decode(message["data"])
@@ -56,11 +55,7 @@ def main(request):
         print('Updating completed.')
         response_code = '200'
 
-        print("Logging in mongodb")
-        print(correlationId)
-        print(delivery_attempt)
         _logging_in_mongodb(correlationId, '200', 'OK', delivery_attempt)
-        print("Logging in mongodb completed.")
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
     except requests.Timeout as e:

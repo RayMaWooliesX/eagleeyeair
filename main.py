@@ -29,8 +29,9 @@ def main(request):
         `timestamp` field contains the publish time.
     """
     response_code = '200'
+    client = error_reporting.Client()
+    
     try:
-        client = error_reporting.Client()
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
 

@@ -29,8 +29,10 @@ def main(request):
         `timestamp` field contains the publish time.
     """
     response_code = '200'
-    error_client = error_reporting.Client()
-    error_client.report_exception()
+    error_client = error_reporting.Client(service="wx-p24-loyalty-api-preference-ee-gcf")
+    print(error_client.project)
+    print(error_client.service)
+    
     try:
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']

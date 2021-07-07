@@ -86,7 +86,8 @@ def main(request):
         print(traceback.format_exc())
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
-        _logging_in_mongodb( correlationId, '500', error_msg, delivery_attempt)
+        if correlationId:
+            _logging_in_mongodb( correlationId, '500', error_msg, delivery_attempt)
 
     finally:
         return response_code

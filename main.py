@@ -181,7 +181,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         col = db[collection]
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
-        print("---Logging in mongodb completed," + results.modified_count + " records logged.")
+        print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")
     except Exception as e:
         print("!!! There was an error while logging in mongodb. " + "Error message.")
         print(traceback.format_exc())

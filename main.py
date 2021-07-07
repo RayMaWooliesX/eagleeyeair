@@ -76,18 +76,18 @@ def main(request):
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
         _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-        print("Http error logging completed.")
+        print("Request error logging completed.")
 
     except Exception as e:
         response_code = '200'
-        print("Data error or any types of error: ")
+        print("Data error or any non-request error: ")
+        logging.error(RuntimeError('Data error or any non-request error:'))
         print(traceback.format_exc())
-        print(e.message)
-        print(e.expression)
+        print(e.args)
         print(e)
         error_client.report_exception()
-        _logging_in_deadletter(event_data_str, e.message)
-        _logging_in_mongodb( correlationId, '500', e.message, delivery_attempt)
+        _logging_in_deadletter(event_data_str, e.args)
+        _logging_in_mongodb( correlationId, '500', e.args, delivery_attempt)
 
     finally:
         return response_code

@@ -70,14 +70,9 @@ def main(request):
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
         print("Request error: ")
-        print(correlationId)
-        print(e.response.status_code)
-        print(e.response.reason)
-        print(e.response.text)
-        print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
+        print("correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
-        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Http error logging completed.")
 
@@ -189,7 +184,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
 
 def _logging_in_deadletter(event_data, error_message):
     try:
-        print("---Sending error message to dead letter topic.")
+        print("---Logging original message to dead letter topic.")
         error_publisher_client = pubsub_v1.PublisherClient()
         error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
                                                             os.environ['error_topic'])
@@ -200,7 +195,7 @@ def _logging_in_deadletter(event_data, error_message):
         # Wait for the publish future to resolve before exiting.
         while not future.done():
             time.sleep(1)
-        print("---Logging to dead letter topic completed.")
+        print("---Logging original message to dead letter topic completed.")
     except Exception as e:
         print("!!! There was an error while sending error message to dead letter topic. " + "Error message: " + e.message)
         pass

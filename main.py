@@ -37,7 +37,7 @@ def main(request):
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
         envelope = json.loads(request.data.decode('utf-8'))
-        logging.log(envelope)
+        print(envelope)
         message = envelope['message']
         event_data_str = base64.b64decode(message["data"])
         event_data = json.loads(event_data_str)

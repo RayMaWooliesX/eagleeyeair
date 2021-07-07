@@ -180,6 +180,8 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
     client = MongoClient(url)
     db = client[dbname]
     col = db[collection]
+    print(correlationId)
+    print(status_object)
     results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
     print(results.modified_count + " records modified in mongodb.")
     print("Completed logging in mongodb")

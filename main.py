@@ -83,8 +83,11 @@ def main(request):
         print("Data error or any non-request error: ")
         logging.error(RuntimeError('Data error or any non-request error:'))
         print(traceback.format_exc())
-        print(e.args)
-        print(e)
+        print(e.__doc__)
+        print(str(e))
+        print(e.__cause__)
+        print(e.__context__)
+
         error_client.report_exception()
         _logging_in_deadletter(event_data_str, e.args)
         _logging_in_mongodb( correlationId, '500', e.args, delivery_attempt)

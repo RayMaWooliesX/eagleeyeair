@@ -70,7 +70,12 @@ def main(request):
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
         print("Http error: ")
-        print("-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
+        print(correlationId)
+        print(e.response.status_code)
+        print(e.response.reason)
+        print(e.response.text)
+        log_str = "-- correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text
+        print(log_str)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, delivery_attempt)

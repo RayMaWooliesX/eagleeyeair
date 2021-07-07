@@ -80,17 +80,13 @@ def main(request):
 
     except Exception as e:
         response_code = '200'
-        print("Data error or any non-request error: ")
         logging.error(RuntimeError('Data error or any non-request error:'))
+        error_msg = e.args + "," + e.__doc__
+        logging.error(RuntimeError(error_msg))
         print(traceback.format_exc())
-        print(e.__doc__)
-        print(str(e))
-        print(e.__cause__)
-        print(e.__context__)
-
         error_client.report_exception()
-        _logging_in_deadletter(event_data_str, e.args)
-        _logging_in_mongodb( correlationId, '500', e.args, delivery_attempt)
+        _logging_in_deadletter(event_data_str, error_msg)
+        _logging_in_mongodb( correlationId, '500', error_msg, delivery_attempt)
 
     finally:
         return response_code

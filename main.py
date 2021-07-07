@@ -29,75 +29,55 @@ def main(request):
         `timestamp` field contains the publish time.
     """
     response_code = '200'
-    error_client = error_reporting.Client(service="wx-p24-loyalty-api-preference-ee-gcf")
-    print(error_client.project)
-    print(error_client.service)
-    print(error_client._client_info)
-    print(error_client._client_options)
-    error_client.report("testing")
-
+    error_client = error_reporting.Client()
     
     try:
-        envelope = json.loads(request.data.decode('utf-8'))
-        message = envelope['message']
-
+        print("Preparing data for EE request.")
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
-
+        envelope = json.loads(request.data.decode('utf-8'))
+        message = envelope['message']
         event_data_str = base64.b64decode(message["data"])
         event_data = json.loads(event_data_str)
         crn = event_data['crn']
         correlationId = event_data['correlationId']
         preferences = event_data['preferences']
         redemptionSetting = preferences['value']
+        print("Data preparation completed.")
 
+        print("Calling EE APIs to update consumer preference.")
         wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId)['walletId']
         consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId)['consumerId']
-
-        ##  3. update consumer with new redemption setting
         update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId)
-        print('updating completed')
-
+        print('Updating completed.')
         response_code = '200'
+        _logging_in_mongodb( correlationId, update_response.status_code, update_response.reason, message.delivery_attempt)
 
-    # return 429 and retry from the pubsub again for a timeout error and log in the mongodb in the last retry
+    # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
     except requests.Timeout as e:
-        print("-----Timeout error-------")
-        logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
-        print("client: " + error_client.project)
-        error_client.report_exception()
-        response_code = '429'
+        response_code = '500'
+        logging.error("Timeout error - correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
+        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
-    # forward data errors to dead letter and log in mongodb without retry by ack the message
+        logging.error("Timeout error logging completed.")
+
+    # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
-        print("-----Request Error-------")
-        error_msg = "correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason
-        logging.error(error_msg)
-        # client = error_reporting.Client()
-        # print("client: " + client.project)
-        # client.report_exception()
-        print(event_data_str.decode('utf-8'))
-        print(e.response.reason)
-        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-        print("after dead letter")
-        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
-        print("after mongodb")
-        print("error reporting client: " + error_client.project)
+        logging.error("Http error - correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason + ", " + e.response.text)
         error_client.report_exception()
-        print("after error reporting report exception")
-        response_code = '200'
+        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
+        _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 1)
+        logging.error("Http error logging completed.")
+
     except Exception as e:
-        raise e
-        # print("-----Other Error-------")
-        # logging.error("correlationId: " + correlationId + "; " + e.message)
-        # client = error_reporting.Client()
-        # print("client: " + client.project)
-        # client.report_exception()
-        # _logging_in_deadletter(event_data, e.message)
-        # _logging_in_mongodb( correlationId, '000', e.message, 0)
-        # response_code = 200
+        response_code = '200'
+        logging.error("Data error - correlationId: " + correlationId + "; " + e.message)
+        error_client.report_exception()
+        _logging_in_deadletter(event_data_str, e.message)
+        _logging_in_mongodb( correlationId, '500', e.message, 1)
+
     finally:
         return response_code
 
@@ -132,7 +112,6 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
                                                 ]
                                    }
                           })
-
     end_point = url + service_path
     headers = _get_header(url, service_path, payload, authClientId, password)
 
@@ -175,47 +154,41 @@ def _get_header(url, service_path, payload, authClientId, password):
               "X-RETRY": "1", "X-EES-OPERATOR": "1", "X-EES-CALLER": "DASHBOARD",
               "X-EES-CALLER-VERSION": "0",
               "Content-Type": "application/json"}
+
     return header
 
 def _logging_in_mongodb(correlationId, status_code, status_message, retried_count):
-    print("Starting logging in mongodb")
-    url = os.environ['mongodb_url']
-    dbname = os.environ['mongodb_dbname']
-    collection = os.environ['mongodb_collection']
-    changes_updated = 'false' if status_code >= 300 else 'true'
-    status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
+    print("---Logging in mongodb")
+    try:
+        url = os.environ['mongodb_url']
+        dbname = os.environ['mongodb_dbname']
+        collection = os.environ['mongodb_collection']
+        changes_updated = 'false' if status_code >= 300 else 'true'
+        status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
+        client = MongoClient(url)
+        db = client[dbname]
+        col = db[collection]
+        results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
-    client = MongoClient(url)
-    db = client[dbname]
-    col = db[collection]
-    print(correlationId)
-    print(status_object)
-    results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
-    print("after results")
-    print(results.matched_count)
-    print(results.modified_count)
-    print(results.modified_count)
-    print("Completed logging in mongodb")
+        print("---Logging in mongodb completed," + results.modified_count + " records logged.")
+    except Exception as e:
+        print("!!! There was an error while logging in mongodb. " + "Error message: " + e.message)
+        pass
 
 def _logging_in_deadletter(event_data, error_message):
-    print("Starting logging to dead letter topic")
-    print(event_data)
-    error_publisher_client = pubsub_v1.PublisherClient()
-    error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
-                                                        os.environ['error_topic'])
-    user = os.environ['FUNCTION_NAME']
-    print(os.environ['GCP_PROJECT'])
-    print(os.environ['error_topic'])
-    print(user)
-    future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8") ,
-                                                                    user=user,
-                                                                    error = error_message)
-    print("after future")
-    print(future.result())
-    print("after future results")
-    # Wait for the publish future to resolve before exiting.
-    while not future.done():
-        time.sleep(1)
-    
-    print(print(future.result()))
-    print("Completed logging to dead letter topic")
+    try:
+        print("---Sending error message to dead letter topic.")
+        error_publisher_client = pubsub_v1.PublisherClient()
+        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
+                                                            os.environ['error_topic'])
+        user = os.environ['FUNCTION_NAME']
+        future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8") ,
+                                                                        user=user,
+                                                                        error = error_message)
+        # Wait for the publish future to resolve before exiting.
+        while not future.done():
+            time.sleep(1)
+        print("---Logging to dead letter topic completed.")
+    except Exception as e:
+        print("!!! There was an error while sending error message to dead letter topic. " + "Error message: " + e.message)
+        pass

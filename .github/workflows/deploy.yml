@@ -76,9 +76,6 @@ jobs:
         with:
           project_id: ${{ env.gprojectid }}
           service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
-      - name: Enable API
-        run: >-
-          gcloud services enable clouderrorreporting.googleapis.com
       - name: Deploy Function
         run: >-
           gcloud functions deploy ${{ env.gcf_name }} 

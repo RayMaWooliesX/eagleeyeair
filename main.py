@@ -54,6 +54,10 @@ def main(request):
         response_code = '200'
 
         print("Logging in mongodb")
+        print(correlationId)
+        print(update_response.status_code)
+        print(update_response.reason)
+        print(message.delivery_attempt)
         _logging_in_mongodb( correlationId, update_response.status_code, update_response.reason, message.delivery_attempt)
         print("Logging in mongodb completed.")
 

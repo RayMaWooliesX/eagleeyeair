@@ -29,8 +29,8 @@ def main(request):
         `timestamp` field contains the publish time.
     """
     response_code = '200'
-    client = error_reporting.Client()
-    
+    error_client = error_reporting.Client()
+    error_client.report_exception()
     try:
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
@@ -59,9 +59,8 @@ def main(request):
     except requests.Timeout as e:
         print("-----Timeout error-------")
         logging.error("correlationId: " + correlationId + "; " + e.response.status_code + ": " + e.response.reason)
-        client = error_reporting.Client()
-        print("client: " + client.project)
-        client.report_exception()
+        print("client: " + error_client.project)
+        error_client.report_exception()
         response_code = '429'
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, message.delivery_attempt)
@@ -79,8 +78,8 @@ def main(request):
         print("after dead letter")
         _logging_in_mongodb( correlationId, e.response.status_code, e.response.reason, 0)
         print("after mongodb")
-        print("error reporting client: " + client.project)
-        client.report_exception()
+        print("error reporting client: " + error_client.project)
+        error_client.report_exception()
         print("after error reporting report exception")
         response_code = '200'
     except Exception as e:

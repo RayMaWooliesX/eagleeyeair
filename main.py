@@ -62,6 +62,7 @@ def main(request):
         response_code = '500'
         print("Timeout error")
         print("-- correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
+        print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.delivery_attempt == 5:
             _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
@@ -71,6 +72,7 @@ def main(request):
     except requests.exceptions.RequestException as e:
         print("Request error: ")
         print("correlationId: " + correlationId + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
+        print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
         _logging_in_mongodb( correlationId, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
@@ -79,7 +81,11 @@ def main(request):
     except Exception as e:
         response_code = '200'
         print("Data error: ")
-        print("--correlationId: " + correlationId + "; " + e.message)
+        print("--correlationId: " + correlationId)
+        print(traceback.format_exc())
+        print(e.message)
+        print(e.expression)
+        print(e)
         error_client.report_exception()
         _logging_in_deadletter(event_data_str, e.message)
         _logging_in_mongodb( correlationId, '500', e.message, delivery_attempt)
@@ -137,7 +143,6 @@ def _calling_the_request_consumer_object_function(mode, end_point, headers, payl
     if response.status_code == 200:
         return response.json()
     else:
-        print(response.json())
         response.raise_for_status()
         return 'NULL'
 
@@ -198,4 +203,5 @@ def _logging_in_deadletter(event_data, error_message):
         print("---Logging original message to dead letter topic completed.")
     except Exception as e:
         print("!!! There was an error while sending error message to dead letter topic. " + "Error message: " + e.message)
+        print(traceback.format_exc())
         pass

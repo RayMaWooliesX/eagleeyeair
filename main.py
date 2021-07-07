@@ -32,7 +32,10 @@ def main(request):
     error_client = error_reporting.Client(service="wx-p24-loyalty-api-preference-ee-gcf")
     print(error_client.project)
     print(error_client.service)
-    
+    if error_client.credentials is not None:
+        print(error_client.credentials.client_id)
+    else:
+        print("Credential is null")
     try:
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']

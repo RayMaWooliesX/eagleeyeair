@@ -65,17 +65,30 @@ def main(request):
     except requests.Timeout as e:
         response_code = '500'
         logging.error(RuntimeError("Timeout error"))
-        print("-- correlationId: " + event_data['correlationId'] + "; " + str(e.response.status_code) + ": " + e.response.reason + ", " + e.response.text)
         print(traceback.format_exc())
-        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         if message.delivery_attempt == 5:
             _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Timeout error logging completed.")
-
+    except requests.HTTPError as e:
+        if e.response.status_code == 429:
+            response_code = '500'
+            logging.error(RuntimeError("Too many requests error"))
+            print(traceback.format_exc())
+            if message.delivery_attempt == 5:
+                _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            print("Too many requests error logging completed.")
+        else:
+            response_code = '200'
+            logging.error(RuntimeError("Http error: "))
+            print(traceback.format_exc())
+            _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
+            error_client.report_exception()
+            _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            print("Http error logging completed.")
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
     except requests.exceptions.RequestException as e:
+        response_code = '200'
         logging.error(RuntimeError("Request error: "))
-        print("correlationId: " + event_data['correlationId'] + "; " + str(e.response.status_code) + ": " + e.response.reason + ": " + e.response.text)
         print(traceback.format_exc())
         _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
@@ -147,7 +160,6 @@ def _calling_the_request_consumer_object_function(mode, end_point, headers, payl
         return response.json()
     else:
         response.raise_for_status()
-        return 'NULL'
 
 def _get_header(url, service_path, payload, authClientId, password):
     '''

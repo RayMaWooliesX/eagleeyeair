@@ -43,14 +43,29 @@ def main(request):
         event_data_str = base64.b64decode(message["data"])
         event_data = json.loads(event_data_str)
         crn = event_data['crn']
+
+        event_type = event_data["eventType"]
+        if event_type != 'Change Preference':
+            raise Exception("Incorrect event type!")
+        event_sub_type = event_data["eventSubType"]
+
+        if event_sub_type == "No liquor Offers":
+            preference_label = "noLiquorOffers"
+        elif event_sub_type == "Redemption Setting":
+            preference_label = "redemptionSetting"
+        else:
+            raise Exception("Incorrect sub event type!")
+        
+
         preferences = event_data['preferences']
-        redemptionSetting = preferences['value']
+        preference_value = preferences['value']
+
         print("Data preparation completed.")
 
         print("Calling EE APIs to update consumer preference.")
         wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, event_data['correlationId'])['walletId']
         consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, event_data['correlationId'])['consumerId']
-        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, event_data['correlationId'])
+        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_label, preference_value,  event_data['correlationId'])
         print('Updating completed.')
         response_code = '200'
 
@@ -59,6 +74,7 @@ def main(request):
         except Exception as e:
             logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
             print(traceback.format_exc())
+            error_client.report_exception()
             pass
 
     # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
@@ -66,6 +82,7 @@ def main(request):
         response_code = '500'
         logging.error(RuntimeError("Timeout error"))
         print(traceback.format_exc())
+        error_client.report_exception()
         if message.delivery_attempt == 5:
             _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Timeout error logging completed.")
@@ -74,6 +91,7 @@ def main(request):
             response_code = '500'
             logging.error(RuntimeError("Too many requests error"))
             print(traceback.format_exc())
+            error_client.report_exception()
             if message.delivery_attempt == 5:
                 _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Too many requests error logging completed.")
@@ -81,8 +99,8 @@ def main(request):
             response_code = '200'
             logging.error(RuntimeError("Http error: "))
             print(traceback.format_exc())
-            _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
             error_client.report_exception()
+            _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
             _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Http error logging completed.")
     # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
@@ -90,8 +108,8 @@ def main(request):
         response_code = '200'
         logging.error(RuntimeError("Request error: "))
         print(traceback.format_exc())
-        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         error_client.report_exception()
+        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
         _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
         print("Request error logging completed.")
 
@@ -105,7 +123,6 @@ def main(request):
         _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
         if event_data['correlationId']:
             _logging_in_mongodb( event_data['correlationId'], '400', error_msg, delivery_attempt)
-
     finally:
         return response_code
 
@@ -129,14 +146,14 @@ def _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlati
     headers = _get_header(url, service_path, payload, authClientId, password)
     return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)
 
-def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, redemptionSetting, correlationId):
+def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_label, preference_value, correlationId):
     # This function will be called to update the Consumer objects based on Wallet and Consumer ID
     service_path = update_consumer_service_path = os.environ['ee_update_consumer_service_path'].replace('{{walletId}}', wallet_id).replace('{{consumerId}}', consumer_id)
 
     payload = json.dumps({"friendlyName": "Consumer Details",
                           "data": {"dimension": [
-                                                 {"label": "redemptionSetting",
-                                                  "value": redemptionSetting}
+                                                 {"label": preference_label,
+                                                  "value": preference_value}
                                                 ]
                                    }
                           })

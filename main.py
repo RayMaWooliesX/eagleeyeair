@@ -45,19 +45,29 @@ def main(request):
         print(request.args.get('token', ''))
 
         print("args")
-        print(request.args.items())
-        
+        print('\n'.join(map(str, request.args.items())))
+        print('\n'.join(map(str, request.args.lists())))
+        print('\n'.join(map(str, request.args.keys())))
+        print('\n'.join(map(str, request.args.values())))
+
+
         print("headers")
         print(request.headers)
 
         print("json")
         print(request.json)
 
+        print("get json")
+        print(request.get_json(silent=True))
+
+        print("data")
+        print(request.data.decode('utf-8'))
+
         print("mimetype")
         print(request.mimetype)
 
         print("values")
-        print(request.values)
+        print('\n'.join(map(str,request.values.items())))
 
         print("content")
         print(request.content_encoding)

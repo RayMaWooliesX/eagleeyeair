@@ -40,6 +40,30 @@ def main(request):
         password = os.environ['ee_api_password']
         
         print(request)
+        
+        print("token")
+        print(request.args.get('token', ''))
+
+        print("args")
+        print(request.args)
+        
+        print("headers")
+        print(request.headers)
+
+        print("json")
+        print(request.json)
+
+        print("mimetype")
+        print(request.mimetype)
+
+        print("values")
+        print(request.values)
+
+        print("content")
+        print(request.content_encoding)
+        print(request.content_length)
+        print(request.content_md5)
+        print(request.content_type)
 
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']

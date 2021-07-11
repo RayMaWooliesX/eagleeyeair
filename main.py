@@ -15,6 +15,7 @@ import json
 import logging
 import traceback
 import requests
+import pymongo
 from pymongo import MongoClient
 from google.cloud import pubsub_v1
 from google.cloud import error_reporting
@@ -37,6 +38,9 @@ def main(request):
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
+        
+        print(request)
+
         envelope = json.loads(request.data.decode('utf-8'))
         message = envelope['message']
         delivery_attempt = envelope['deliveryAttempt']
@@ -63,8 +67,8 @@ def main(request):
         print("Data preparation completed.")
 
         print("Calling EE APIs to update consumer preference.")
-        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, event_data['correlationId'])['walletId']
-        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, event_data['correlationId'])['consumerId']
+        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, event_data['correlationId'])
+        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, event_data['correlationId'])
         update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_label, preference_value,  event_data['correlationId'])
         print('Updating completed.')
         response_code = '200'
@@ -136,7 +140,7 @@ def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     payload = ''
     headers = _get_header(url, service_path, payload, authClientId, password)
     end_point = url + service_path
-    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)
+    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)['walletId']
 
 def _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId):
     # This function will be called to get Consumer ID based on Wallet ID
@@ -144,7 +148,7 @@ def _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlati
     payload = ''
     end_point = url + service_path
     headers = _get_header(url, service_path, payload, authClientId, password)
-    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)
+    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)['consumerId']
 
 def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_label, preference_value, correlationId):
     # This function will be called to update the Consumer objects based on Wallet and Consumer ID
@@ -208,7 +212,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         collection = os.environ['mongodb_collection']
         changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
-        client = MongoClient(url)
+        client = pymongo.MongoClient(url)
         db = client[dbname]
         col = db[collection]
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})

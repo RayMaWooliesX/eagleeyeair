@@ -19,6 +19,7 @@ import pymongo
 from pymongo import MongoClient
 from google.cloud import pubsub_v1
 from google.cloud import error_reporting
+from flask import request
 
 def main(request):
     """Background Cloud Function to be triggered by Pub/Sub.
@@ -30,7 +31,7 @@ def main(request):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
-    response_code = '200'
+    # response_code = '200'
     error_client = error_reporting.Client()
     
     try:
@@ -38,44 +39,8 @@ def main(request):
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
-        
-        print(request)
-        
-        print("token")
-        print(request.args.get('token', ''))
 
-        print("args")
-        print('\n'.join(map(str, request.args.items())))
-        print('\n'.join(map(str, request.args.lists())))
-        print('\n'.join(map(str, request.args.keys())))
-        print('\n'.join(map(str, request.args.values())))
-
-
-        print("headers")
-        print(request.headers)
-
-        print("json")
-        print(request.json)
-
-        print("get json")
-        print(request.get_json(silent=True))
-
-        print("data")
-        print(request.data.decode('utf-8'))
-
-        print("mimetype")
-        print(request.mimetype)
-
-        print("values")
-        print('\n'.join(map(str,request.values.items())))
-
-        print("content")
-        print(request.content_encoding)
-        print(request.content_length)
-        print(request.content_md5)
-        print(request.content_type)
-
-        envelope = json.loads(request.data.decode('utf-8'))
+        envelope = json.loads(request.get_json())
         message = envelope['message']
         delivery_attempt = envelope['deliveryAttempt']
         event_data_str = base64.b64decode(message["data"])
@@ -94,7 +59,6 @@ def main(request):
         else:
             raise Exception("Incorrect sub event type!")
         
-
         preferences = event_data['preferences']
         preference_value = preferences['value']
 
@@ -115,16 +79,7 @@ def main(request):
             error_client.report_exception()
             pass
 
-    # return 500 and retry from the pubsub again for a timeout error and log into the mongodb in the last retry
-    except requests.Timeout as e:
-        response_code = '500'
-        logging.error(RuntimeError("Timeout error"))
-        print(traceback.format_exc())
-        error_client.report_exception()
-        if message.delivery_attempt == 5:
-            _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-        print("Timeout error logging completed.")
-    except requests.HTTPError as e:
+    except requests.exceptions.RequestException as e:
         if e.response.status_code == 429:
             response_code = '500'
             logging.error(RuntimeError("Too many requests error"))
@@ -134,25 +89,16 @@ def main(request):
                 _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Too many requests error logging completed.")
         else:
-            response_code = '200'
+            response_code = '102'
             logging.error(RuntimeError("Http error: "))
             print(traceback.format_exc())
             error_client.report_exception()
             _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
             _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Http error logging completed.")
-    # forward data errors to dead letter and log in mongodb without retry by acknowledgeing the message
-    except requests.exceptions.RequestException as e:
-        response_code = '200'
-        logging.error(RuntimeError("Request error: "))
-        print(traceback.format_exc())
-        error_client.report_exception()
-        _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-        _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-        print("Request error logging completed.")
 
     except Exception as e:
-        response_code = '200'
+        response_code = '204'
         logging.error(RuntimeError('Data error:'))
         error_msg = ','.join(e.args) + "," + e.__doc__
         logging.error(RuntimeError(error_msg))

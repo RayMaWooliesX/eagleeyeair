@@ -45,7 +45,7 @@ def main(request):
         print(request.args.get('token', ''))
 
         print("args")
-        print(request.args)
+        print(request.args.items())
         
         print("headers")
         print(request.headers)

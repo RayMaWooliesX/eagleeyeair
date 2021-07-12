@@ -40,7 +40,7 @@ def main(request):
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
 
-        envelope = json.loads(request.get_json())
+        envelope = request.get_json()
         message = envelope['message']
         delivery_attempt = envelope['deliveryAttempt']
         event_data_str = base64.b64decode(message["data"])

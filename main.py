@@ -116,7 +116,7 @@ def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     :param crn:
     :return: Wallet ID  will be returned based on the CRN
     '''
-    service_path = os.environ['ee_get_wallet_service_path'].replace('{{idenitityValueCRN}}', crn)
+    service_path = os.environ['ee_get_wallet_service_path'].replace('{{identityValueCRN}}', crn)
     payload = ''
     headers = _get_header(url, service_path, payload, authClientId, password)
     end_point = url + service_path
@@ -148,7 +148,7 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
 
 def _calling_the_request_consumer_object_function(mode, end_point, headers, payload, correlationId):
     '''
-    This function will make a call to Eagle Eye API's
+    This function will make a call to Eagle Eye API
     :param mode: will determine if it is get, Post or Patch
     :param end_point: End point is the complete URL
     :param header:  Header is the request header

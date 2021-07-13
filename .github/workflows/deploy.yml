@@ -62,9 +62,6 @@ jobs:
             kv/data/cloud-functions/${{ env.gcf_name }} trigger_topic ;
             kv/data/cloud-functions/${{ env.gcf_name }} max_function_instances ;
             kv/data/cloud-functions/${{ env.gcf_name }} ee_api_url ;
-            kv/data/cloud-functions/${{ env.gcf_name }} ee_get_wallet_service_path ;
-            kv/data/cloud-functions/${{ env.gcf_name }} ee_get_consumer_service_path ;
-            kv/data/cloud-functions/${{ env.gcf_name }} ee_update_consumer_service_path ;
             kv/data/apps/wx-p24-ee-api/credentials user | ee_api_user ;
             kv/data/apps/wx-p24-ee-api/credentials password | ee_api_password ;
             kv/data/mongodbatlas/wx-p24-loyalty-api-cfp url | mongodb_url ;
@@ -95,9 +92,9 @@ jobs:
           --set-env-vars ee_api_url=${{ steps.vault.outputs.ee_api_url }}
           --set-env-vars ee_api_user=${{ steps.vault.outputs.ee_api_user }}
           --set-env-vars ee_api_password=${{ steps.vault.outputs.ee_api_password }}
-          --set-env-vars ee_get_wallet_service_path=${{ steps.vault.outputs.ee_get_wallet_service_path }}
-          --set-env-vars ee_get_consumer_service_path=${{ steps.vault.outputs.ee_get_consumer_service_path }}
-          --set-env-vars ee_update_consumer_service_path=${{ steps.vault.outputs.ee_update_consumer_service_path }}
+          --set-env-vars ee_get_wallet_service_path='/wallet?identity-value={{identityValueCRN}}'
+          --set-env-vars ee_get_consumer_service_path='/wallet/{{walletId}}/consumer'
+          --set-env-vars ee_update_consumer_service_path='/wallet/{{walletId}}/consumer/{{consumerId}}'
           --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
           --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
           --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}

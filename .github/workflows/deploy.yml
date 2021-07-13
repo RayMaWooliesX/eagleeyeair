@@ -83,7 +83,7 @@ jobs:
           --allow-unauthenticated
           --entry-point=main 
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
-          --ingress-settings=all
+          --ingress-settings=internal-only
           --vpc-connector=wx-p24-store-canonical
           --egress-settings=all
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}

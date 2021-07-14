@@ -96,7 +96,7 @@ jobs:
           --set-env-vars ee_get_consumer_service_path='/wallet/{{walletId}}/consumer'
           --set-env-vars ee_update_consumer_service_path='/wallet/{{walletId}}/consumer/{{consumerId}}'
           --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
-          --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
-          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
-          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
+          --set-env-vars mongodb_url='mongodb+srv://data-test-cfp-api:VMeM7zkSZxNU3KJJQk6V@data-test-cfp.scdqz.mongodb.net/'
+          --set-env-vars mongodb_dbname='cfp'
+          --set-env-vars mongodb_collection='CfpChangeStatus'
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

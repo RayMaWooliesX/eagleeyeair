@@ -84,7 +84,7 @@ jobs:
           --entry-point=main 
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
           --ingress-settings=all
-          --vpc-connector=wx-p24-store-canonical
+          --vpc-connector=wx-p24-loyalty-api-pref
           --egress-settings=all
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
           --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
@@ -96,7 +96,7 @@ jobs:
           --set-env-vars ee_get_consumer_service_path='/wallet/{{walletId}}/consumer'
           --set-env-vars ee_update_consumer_service_path='/wallet/{{walletId}}/consumer/{{consumerId}}'
           --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
-          --set-env-vars mongodb_url='mongodb+srv://data-dev-cfp-api:vfBGaWenNyE8vrvy2SRL@data-dev-cfp.gqs4f.gcp.mongodb.net/'
-          --set-env-vars mongodb_dbname='cfp'
-          --set-env-vars mongodb_collection='CfpChangeStatus'
+          --set-env-vars mongodb_url='${{ steps.vault.outputs.mongodb_url }}'
+          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
+          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

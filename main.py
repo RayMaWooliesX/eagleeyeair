@@ -202,7 +202,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         #print(db.list_collection_names())
         col = db[collection]
         print(col.full_name)
-        print(col.count_documents())
+        print(col.count_documents({}))
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
         print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")

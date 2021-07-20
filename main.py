@@ -77,7 +77,7 @@ def main(request):
             logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
             print(traceback.format_exc())
             error_client.report_exception()
-            pass
+            return '200'
 
     except requests.exceptions.RequestException as e:
         if e.response.status_code == 429:

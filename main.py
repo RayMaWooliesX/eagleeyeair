@@ -199,9 +199,10 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
         client = MongoClient(url)
         db = client[dbname]
-        print(db.list_collection_names())
+        #print(db.list_collection_names())
         col = db[collection]
         print(col.full_name)
+        print(col.count_documents())
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
         print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")

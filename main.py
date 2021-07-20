@@ -187,7 +187,7 @@ def _get_header(url, service_path, payload, authClientId, password):
 def _logging_in_mongodb(correlationId, status_code, status_message, retried_count):
     print("---Logging in mongodb")
     try:
-        url = os.environ['mongodb_url']
+        url = os.environ['mongodb_url'] + "?ssl=true&ssl_cert_reqs=CERT_NONE"
         dbname = os.environ['mongodb_dbname']
         collection = os.environ['mongodb_collection']
 

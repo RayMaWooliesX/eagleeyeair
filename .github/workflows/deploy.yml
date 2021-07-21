@@ -73,9 +73,6 @@ jobs:
         with:
           project_id: ${{ env.gprojectid }}
           service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
-      - name: testing
-        run: >-
-          echo "${{ steps.vault.outputs.mongodb_url }}"
       - name: Deploy Function
         run: >-
           gcloud functions deploy ${{ env.gcf_name }} 

@@ -77,7 +77,8 @@ def main(request):
             logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
             print(traceback.format_exc())
             error_client.report_exception()
-            return '200'
+        
+        return '200'
 
     except requests.exceptions.RequestException as e:
         if e.response.status_code == 429:
@@ -190,13 +191,13 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         url = os.environ['mongodb_url']
         dbname = os.environ['mongodb_dbname']
         collection = os.environ['mongodb_collection']
-        print(url)
+
         changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
         client = MongoClient(url)
         db = client[dbname]
         col = db[collection]
-        
+        print(correlationId)
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
         print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")

@@ -33,7 +33,8 @@ def main(request):
     """
     # response_code = '200'
     error_client = error_reporting.Client()
-    
+    print(request)
+
     try:
         logging.info("Preparing preference data from event data.")
         url = os.environ['ee_api_url']

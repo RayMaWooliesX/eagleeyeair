@@ -49,10 +49,10 @@ def main(request):
         corrlation_id = event_data.get('correlation_id')
         crn = event_data.get('crn')
         preferences = event_data.get('preferences')
-        
-        for key, value in event_data.items:
-            print(key + ': ' + value)
 
+        print(event_sub_type)
+        print(preferences)
+        
         preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 
         logging.info("Data preparation completed.")

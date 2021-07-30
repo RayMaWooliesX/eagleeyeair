@@ -35,7 +35,7 @@ jobs:
           else
             echo '::set-output name=environ::poc'
             echo '::set-output name=gprojectid::gcp-wow-rwds-etl-poc-dev'
-          fid
+          fi
   test_build_and_deploy:
     runs-on: ubuntu-latest
     needs: init

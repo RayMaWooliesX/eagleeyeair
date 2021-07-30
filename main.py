@@ -33,7 +33,7 @@ def main(request):
     """
     # response_code = '200'
     error_client = error_reporting.Client()
-    print(request)
+    print(request.get_json())
 
     try:
         logging.info("Preparing preference data from event data.")
@@ -50,6 +50,9 @@ def main(request):
         crn = event_data.get('crn')
         preferences = event_data.get('preferences')
         
+        for key, value in event_data.items:
+            print(key + ': ' + value)
+
         preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 
         logging.info("Data preparation completed.")

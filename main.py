@@ -137,7 +137,7 @@ def _parse_request(request):
     correlation_id = event_data['eventDetails']['correlationId']
     crn = event_data['eventDetails']['profile']['crn']
     preferences = event_data['eventDetails']['profile']['account']['preferences']
-
+    
     print('Data preparation completed.')
     event_data = {'delivery_attempt': delivery_attempt,
                         'event_sub_types': event_sub_type,
@@ -180,7 +180,7 @@ def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''
     service_path = os.environ['ee_get_wallet_service_path'].replace('{{identityValueCRN}}', crn)
     payload = ''
-    headers = _get_header(url, service_path, payload, authClientId, password, correlationId)
+    headers = _get_header(service_path, payload, authClientId, password, correlationId)
     end_point = url + service_path
     return _calling_the_request_consumer_object_function("GET", end_point, headers, payload)['walletId']
 
@@ -189,7 +189,7 @@ def _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlati
     service_path = os.environ['ee_get_consumer_service_path'].replace('{{walletId}}', wallet_id)
     payload = ''
     end_point = url + service_path
-    headers = _get_header(url, service_path, payload, authClientId, password, correlationId)
+    headers = _get_header(service_path, payload, authClientId, password, correlationId)
     return _calling_the_request_consumer_object_function("GET", end_point, headers, payload)['consumerId']
 
 def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_payload, correlationId):
@@ -197,7 +197,7 @@ def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, passwo
     service_path = update_consumer_service_path = os.environ['ee_update_consumer_service_path'].replace('{{walletId}}', wallet_id).replace('{{consumerId}}', consumer_id)
     end_point = url + service_path
 
-    headers = _get_header(url, service_path, preference_payload, authClientId, password, correlationId)
+    headers = _get_header(service_path, preference_payload, authClientId, password, correlationId)
 
     return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, payload=preference_payload)
 

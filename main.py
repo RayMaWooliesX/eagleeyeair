@@ -145,7 +145,7 @@ def _parse_request(request):
                         'tracking_id': tracking_id, 
                         'correlation_id': correlation_id, 
                         'crn': crn, 
-                        'preference_value': preferences}
+                        'preferences': preferences}
 
     return event_data 
 

@@ -84,7 +84,7 @@ jobs:
           --entry-point=main 
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
           --ingress-settings=all
-          --vpc-connector= wx-p24-loyalty-api-pref
+          --vpc-connector=wx-p24-loyalty-api-pref
           --egress-settings=all
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
           --set-env-vars GCP_PROJECT=${{ env.gprojectid }}

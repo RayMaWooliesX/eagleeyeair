@@ -36,7 +36,7 @@ def test_parse_request():
 
 def test_prepare_preference_payload():
     assert main._prepare_preference_payload('redemption', [{"id": 1024, "name": "Unsubscribe All", "value": "QFF"}]) == '{"friendlyName": "Consumer Details", "data": {"dimension": [{"label": "redemptionSetting", "value": "QFF"}]}}'
-
+    assert main._prepare_preference_payload('communications', [{"id": 1042, "name": "Unsubscribe All", "value": "Y"}, {"id": 1024, "name": "Unsubscribe All", "value": "Invalid"}]) == '{"friendlyName": "Consumer Details", "data": {"dimension": [{"label": "noLiquorOffers", "value": true}]}}'
 
 @mock.patch("main._get_wallet_id_by_crn", return_value=123)
 @mock.patch("main._get_consumer_id_by_wallet", return_value=123)

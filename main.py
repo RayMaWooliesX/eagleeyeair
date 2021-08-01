@@ -164,13 +164,13 @@ def _prepare_preference_payload(event_sub_type, preferences):
                                                    )
     elif event_sub_type == 'redemption':
         payload['data']['dimension'].append({"label": 'redemptionSetting',
-                                                "value":  True if preferences[0]['value'] == 'Y' else False }
+                                                "value": preferences[0]['value']}
                                             )
 
     if not payload['data']['dimension']:
         raise Exception('No expected preference found in the event data !') 
 
-    return json.dump(payload)
+    return json.dumps(payload)
 
 def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''

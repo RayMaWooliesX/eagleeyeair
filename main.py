@@ -140,7 +140,7 @@ def _parse_request(request):
 
     print('Data preparation completed.')
     event_data = {'delivery_attempt': delivery_attempt,
-                        'event_sub_types': event_sub_types,
+                        'event_sub_types': event_sub_type,
                         'operation': operation,
                         'tracking_id': tracking_id, 
                         'correlation_id': correlation_id, 

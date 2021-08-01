@@ -33,7 +33,6 @@ def main(request):
     """
     # response_code = '200'
     error_client = error_reporting.Client()
-    print(request.get_json())
 
     try:
         logging.info("Preparing preference data from event data.")
@@ -49,6 +48,7 @@ def main(request):
         corrlation_id = event_data.get('correlation_id')
         crn = event_data.get('crn')
         preferences = event_data.get('preferences')
+        event_data_str = event_data.get('event_data_str')
 
         print(event_sub_type)
         print(preferences)
@@ -65,7 +65,7 @@ def main(request):
         response_code = '200'
 
         try:
-            _logging_in_mongodb(event_data['correlationId'], '200', 'OK', delivery_attempt)
+            _logging_in_mongodb(corrlation_id, '200', 'OK', delivery_attempt)
         except Exception as e:
             logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
             print(traceback.format_exc())
@@ -79,8 +79,8 @@ def main(request):
             logging.error(RuntimeError("Too many requests error"))
             print(traceback.format_exc())
             error_client.report_exception()
-            if message.delivery_attempt == 5:
-                _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            if delivery_attempt == 5:
+                _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Too many requests error logging completed.")
         else:
             response_code = '102'
@@ -91,7 +91,7 @@ def main(request):
             logging.error(RuntimeError(e.response.reason))
             logging.error(RuntimeError(e.response.text))
             _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-            _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Http error logging completed.")
 
     except Exception as e:
@@ -102,8 +102,8 @@ def main(request):
         print(traceback.format_exc())
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
-        if event_data['correlationId']:
-            _logging_in_mongodb( event_data['correlationId'], '400', error_msg, delivery_attempt)
+        if corrlation_id:
+            _logging_in_mongodb( corrlation_id, '400', error_msg, delivery_attempt)
     finally:
         return response_code
 
@@ -137,7 +137,7 @@ def _parse_request(request):
     correlation_id = event_data['eventDetails']['correlationId']
     crn = event_data['eventDetails']['profile']['crn']
     preferences = event_data['eventDetails']['profile']['account']['preferences']
-    
+
     print('Data preparation completed.')
     event_data = {'delivery_attempt': delivery_attempt,
                         'event_sub_types': event_sub_type,
@@ -145,7 +145,8 @@ def _parse_request(request):
                         'tracking_id': tracking_id, 
                         'correlation_id': correlation_id, 
                         'crn': crn, 
-                        'preferences': preferences}
+                        'preferences': preferences,
+                        'event_data_str': event_data_str}
 
     return event_data 
 

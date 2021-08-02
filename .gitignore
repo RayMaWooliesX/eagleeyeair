@@ -3,3 +3,4 @@ venv
 htmlcov/
 __pycache__/
 .coverage
+customer_preference_load.py

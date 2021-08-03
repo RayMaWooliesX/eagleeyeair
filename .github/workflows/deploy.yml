@@ -48,7 +48,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - Display environment
+      - name: Display environment
         run: | 
           echo 'environment:'
           echo ${{ needs.init.outputs.environ }}

@@ -38,7 +38,7 @@ jobs:
   test_build_and_deploy:
     runs-on: ubuntu-latest
     needs: init
-    if: ${{ needs.init.outputs.environ }} != 'null'
+    if: ${{ needs.init.outputs.environ }} != null
     environment:
       name: ${{ needs.init.outputs.environ }}
     env:

@@ -33,51 +33,45 @@ def main(request):
     """
     # response_code = '200'
     error_client = error_reporting.Client()
-    
+
     try:
-        print("Preparing data for EE request.")
+        logging.info("Preparing preference data from event data.")
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
 
-        envelope = request.get_json()
-        message = envelope['message']
-        delivery_attempt = envelope['deliveryAttempt']
-        event_data_str = base64.b64decode(message["data"])
-        event_data = json.loads(event_data_str)
-        crn = event_data['crn']
+        event_data = _parse_request(request)
+        delivery_attempt = event_data.get('delivery_attempt')
+        event_sub_type = event_data.get('event_sub_types')
+        operation = event_data.get('operation')
+        tracking_id = event_data.get('tracking_id')
+        corrlation_id = event_data.get('correlation_id')
+        crn = event_data.get('crn')
+        preferences = event_data.get('preferences')
+        event_data_str = event_data.get('event_data_str')
 
-        event_type = event_data["eventType"]
-        if event_type != 'Change Preference':
-            raise Exception("Incorrect event type!")
-        event_sub_type = event_data["eventSubType"]
-
-        if event_sub_type == "No liquor Offers":
-            preference_label = "noLiquorOffers"
-        elif event_sub_type == "Redemption Setting":
-            preference_label = "redemptionSetting"
-        else:
-            raise Exception("Incorrect sub event type!")
+        print(event_sub_type)
+        print(preferences)
         
-        preferences = event_data['preferences']
-        preference_value = preferences['value']
+        preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 
-        print("Data preparation completed.")
+        logging.info("Data preparation completed.")
 
         print("Calling EE APIs to update consumer preference.")
-        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, event_data['correlationId'])
-        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, event_data['correlationId'])
-        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_label, preference_value,  event_data['correlationId'])
+        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, corrlation_id)
+        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, corrlation_id)
+        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_payload,  corrlation_id)
         print('Updating completed.')
         response_code = '200'
 
         try:
-            _logging_in_mongodb(event_data['correlationId'], '200', 'OK', delivery_attempt)
+            _logging_in_mongodb(corrlation_id, '200', 'OK', delivery_attempt)
         except Exception as e:
             logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
             print(traceback.format_exc())
             error_client.report_exception()
-            pass
+        
+        return '200'
 
     except requests.exceptions.RequestException as e:
         if e.response.status_code == 429:
@@ -85,16 +79,19 @@ def main(request):
             logging.error(RuntimeError("Too many requests error"))
             print(traceback.format_exc())
             error_client.report_exception()
-            if message.delivery_attempt == 5:
-                _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            if delivery_attempt == 5:
+                _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Too many requests error logging completed.")
         else:
             response_code = '102'
             logging.error(RuntimeError("Http error: "))
             print(traceback.format_exc())
             error_client.report_exception()
+            logging.error(RuntimeError(e.response.status_code))
+            logging.error(RuntimeError(e.response.reason))
+            logging.error(RuntimeError(e.response.text))
             _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-            _logging_in_mongodb( event_data['correlationId'], str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             print("Http error logging completed.")
 
     except Exception as e:
@@ -105,10 +102,76 @@ def main(request):
         print(traceback.format_exc())
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
-        if event_data['correlationId']:
-            _logging_in_mongodb( event_data['correlationId'], '400', error_msg, delivery_attempt)
+        if corrlation_id:
+            _logging_in_mongodb( corrlation_id, '400', error_msg, delivery_attempt)
     finally:
         return response_code
+
+def _parse_request(request):
+    '''parse the request and return event_type, event_sub_type, operation_type and 
+       a map of event detail attributes
+    '''
+    print('Preparing data for EE request.')
+
+    envelope = request.get_json()
+    message = envelope['message']
+    delivery_attempt = envelope['deliveryAttempt']
+    event_data_str = base64.b64decode(message['data'])
+    event_data = json.loads(event_data_str)
+
+    event_type = event_data['eventType']
+    if event_type != 'preferences':
+        raise Exception('Event type should be "preferences"! But got ' + event_type)
+
+    event_sub_types = {'redemption', 'communication'}
+    event_sub_type = event_data['eventSubType']
+    if event_sub_type not in event_sub_types:
+        raise Exception('Unexpected sub event type! ' + event_sub_type)
+    
+    operations = ['create', 'update']
+    operation = event_data['operation']
+    if operation not in operations:
+        raise Exception('Incorrect operation value! ' + operation)
+
+    tracking_id = event_data['eventDetails']['trackingId']
+    correlation_id = event_data['eventDetails']['correlationId']
+    crn = event_data['eventDetails']['profile']['crn']
+    preferences = event_data['eventDetails']['profile']['account']['preferences']
+
+    print('Data preparation completed.')
+    event_data = {'delivery_attempt': delivery_attempt,
+                        'event_sub_types': event_sub_type,
+                        'operation': operation,
+                        'tracking_id': tracking_id, 
+                        'correlation_id': correlation_id, 
+                        'crn': crn, 
+                        'preferences': preferences,
+                        'event_data_str': event_data_str}
+
+    return event_data 
+
+def _prepare_preference_payload(event_sub_type, preferences):
+
+    payload = {"friendlyName": "Consumer Details",
+                          "data": {"dimension": []
+                                   }
+              }
+
+    if event_sub_type == 'communications':
+        for preference in preferences:
+            if preference['id'] == 1042:
+                payload['data']['dimension'].append({"label": 'noLiquorOffers',
+                                                     "value":  True if preference['value'] == 'Y' else False }
+                                                   )
+    elif event_sub_type == 'redemption':
+        payload['data']['dimension'].append({"label": 'redemptionSetting',
+                                                "value": preferences[0]['value']}
+                                            )
+
+    if not payload['data']['dimension']:
+        raise Exception('No expected preference found in the event data !') 
+
+    return json.dumps(payload)
 
 def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''
@@ -118,35 +181,28 @@ def _get_wallet_id_by_crn(url, authClientId, password, crn, correlationId):
     '''
     service_path = os.environ['ee_get_wallet_service_path'].replace('{{identityValueCRN}}', crn)
     payload = ''
-    headers = _get_header(url, service_path, payload, authClientId, password)
+    headers = _get_header(service_path, payload, authClientId, password, correlationId)
     end_point = url + service_path
-    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)['walletId']
+    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload)['walletId']
 
 def _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, correlationId):
     # This function will be called to get Consumer ID based on Wallet ID
     service_path = os.environ['ee_get_consumer_service_path'].replace('{{walletId}}', wallet_id)
     payload = ''
     end_point = url + service_path
-    headers = _get_header(url, service_path, payload, authClientId, password)
-    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload, correlationId)['consumerId']
+    headers = _get_header(service_path, payload, authClientId, password, correlationId)
+    return _calling_the_request_consumer_object_function("GET", end_point, headers, payload)['consumerId']
 
-def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_label, preference_value, correlationId):
+def _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_payload, correlationId):
     # This function will be called to update the Consumer objects based on Wallet and Consumer ID
     service_path = update_consumer_service_path = os.environ['ee_update_consumer_service_path'].replace('{{walletId}}', wallet_id).replace('{{consumerId}}', consumer_id)
-
-    payload = json.dumps({"friendlyName": "Consumer Details",
-                          "data": {"dimension": [
-                                                 {"label": preference_label,
-                                                  "value": preference_value}
-                                                ]
-                                   }
-                          })
     end_point = url + service_path
-    headers = _get_header(url, service_path, payload, authClientId, password)
 
-    return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, payload=payload, correlationId=correlationId)
+    headers = _get_header(service_path, preference_payload, authClientId, password, correlationId)
 
-def _calling_the_request_consumer_object_function(mode, end_point, headers, payload, correlationId):
+    return _calling_the_request_consumer_object_function("PATCH", end_point, headers=headers, payload=preference_payload)
+
+def _calling_the_request_consumer_object_function(mode, end_point, headers, payload):
     '''
     This function will make a call to Eagle Eye API
     :param mode: will determine if it is get, Post or Patch
@@ -162,10 +218,9 @@ def _calling_the_request_consumer_object_function(mode, end_point, headers, payl
     else:
         response.raise_for_status()
 
-def _get_header(url, service_path, payload, authClientId, password):
+def _get_header(service_path, payload, authClientId, password, correlationId):
     '''
     This function will prepare the header based on the parameters
-    :param url:
     :param service_path:
     :param transaction_id:
     :param payload:
@@ -174,7 +229,7 @@ def _get_header(url, service_path, payload, authClientId, password):
     :return:
     '''
     prefix = '/2.0'
-    transaction_id = 'cde_update_records_ ' + hashlib.md5(str(time.time()).encode()).hexdigest()
+    transaction_id = correlationId + '-' + str(time.time())
     authHash = hashlib.sha256((prefix + service_path + payload + password).encode()).hexdigest()
     header = {"X-EES-AUTH-HASH": authHash, "X-EES-AUTH-CLIENT-ID": authClientId,
               "X-TRANSACTION-ID": transaction_id,
@@ -190,18 +245,20 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         url = os.environ['mongodb_url']
         dbname = os.environ['mongodb_dbname']
         collection = os.environ['mongodb_collection']
+
         changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
-        client = pymongo.MongoClient(url)
+        client = MongoClient(url)
         db = client[dbname]
         col = db[collection]
+        print(correlationId)
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
         print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")
     except Exception as e:
         logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
         print(traceback.format_exc())
-        pass
+        return '200'
 
 def _logging_in_deadletter(event_data, error_message):
     try:

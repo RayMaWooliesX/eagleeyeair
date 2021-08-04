@@ -157,7 +157,7 @@ def _prepare_preference_payload(event_sub_type, preferences):
                                    }
               }
 
-    if event_sub_type == 'communications':
+    if event_sub_type == 'communication':
         for preference in preferences:
             if preference['id'] == 1042:
                 payload['data']['dimension'].append({"label": 'noLiquorOffers',

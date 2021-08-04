@@ -49,9 +49,6 @@ def main(request):
         crn = event_data.get('crn')
         preferences = event_data.get('preferences')
         event_data_str = event_data.get('event_data_str')
-
-        print(event_sub_type)
-        print(preferences)
         
         preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 

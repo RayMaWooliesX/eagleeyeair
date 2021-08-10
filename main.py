@@ -120,12 +120,12 @@ def _parse_request(request):
     if event_type != 'preferences':
         raise Exception('Event type should be "preferences"! But got ' + event_type)
 
-    event_sub_types = {'redemption', 'communication'}
+    event_sub_types = {'redemption', 'communication', 'ereceipts'}
     event_sub_type = event_data['eventSubType']
     if event_sub_type not in event_sub_types:
         raise Exception('Unexpected sub event type! ' + event_sub_type)
     
-    operations = ['create', 'update']
+    operations = ['update']
     operation = event_data['operation']
     if operation not in operations:
         raise Exception('Incorrect operation value! ' + operation)
@@ -164,7 +164,10 @@ def _prepare_preference_payload(event_sub_type, preferences):
         payload['data']['dimension'].append({"label": 'redemptionSetting',
                                                 "value": preferences[0]['value']}
                                             )
-
+    elif event_sub_type == 'ereceipts':
+        payload['data']['dimension'].append({"label": 'ereceipts',
+                                                "value": preferences[0]['value']}
+                                            )
     if not payload['data']['dimension']:
         raise Exception('No expected preference found in the event data !') 
 

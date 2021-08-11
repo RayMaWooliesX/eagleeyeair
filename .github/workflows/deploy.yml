@@ -99,3 +99,5 @@ jobs:
           --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
           --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
           --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
+          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
+          --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

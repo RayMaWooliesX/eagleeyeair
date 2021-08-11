@@ -34,12 +34,14 @@ def main(request):
     # response_code = '200'
     error_client = error_reporting.Client()
 
+    print(request)
+
     try:
         logging.info("Preparing preference data from event data.")
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
-
+    
         event_data = _parse_request(request)
         delivery_attempt = event_data.get('delivery_attempt')
         event_sub_type = event_data.get('event_sub_types')

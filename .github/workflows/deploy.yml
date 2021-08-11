@@ -31,7 +31,7 @@ jobs:
             echo '::set-output name=gprojectid::gcp-wow-rwds-etl-dev'
           elif [[ ${{ github.ref }} == 'refs/heads/feature/loyaltyapi' ]]; then
             echo '::set-output name=environ::poc'
-            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-dev_poc'
+            echo '::set-output name=gprojectid::gcp-wow-rwds-etl-poc-dev'
           else
             echo '::set-output name=environ::null'
           fi

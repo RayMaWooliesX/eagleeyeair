@@ -97,3 +97,5 @@ jobs:
           --set-env-vars ee_get_consumer_service_path='/wallet/{{walletId}}/consumer'
           --set-env-vars ee_update_consumer_service_path='/wallet/{{walletId}}/consumer/{{consumerId}}'
           --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
+          --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
+          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}

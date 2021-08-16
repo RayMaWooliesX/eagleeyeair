@@ -81,7 +81,6 @@ jobs:
           --memory=256MB
           --runtime=python38
           --trigger-http 
-          --allow-authenticated
           --entry-point=main 
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
           --ingress-settings=all

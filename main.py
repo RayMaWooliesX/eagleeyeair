@@ -33,7 +33,7 @@ def main(request):
     """
     # response_code = '200'
     error_client = error_reporting.Client()
-    print(request)
+
     try:
         logging.info("Preparing preference data from event data.")
         url = os.environ['ee_api_url']
@@ -50,8 +50,6 @@ def main(request):
         preferences = event_data.get('preferences')
         event_data_str = event_data.get('event_data_str')
 
-        print(event_sub_type)
-        print(preferences)
         
         preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 
@@ -249,7 +247,9 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
 
         changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
-        client = MongoClient(url, connectTimeoutMS=5000, serverSelectionTimeoutMS = 5000)
+
+        client = MongoClient(url, connectTimeoutMS = 5000, serverSelectionTimeoutMS = 5000)
+
         db = client[dbname]
         col = db[collection]
         print(correlationId)

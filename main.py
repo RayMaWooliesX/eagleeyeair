@@ -115,8 +115,6 @@ def _parse_request(request):
 
     envelope = request.get_json()
 
-    print(envelope)
-
     message = envelope['message']
     delivery_attempt = envelope['deliveryAttempt']
     event_data_str = base64.b64decode(message['data'])

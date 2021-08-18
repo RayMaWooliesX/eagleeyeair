@@ -55,11 +55,11 @@ def main(request):
 
         logging.info("Data preparation completed.")
 
-        print("Calling EE APIs to update consumer preference.")
+        logging.info("Calling EE APIs to update consumer preference.")
         wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, corrlation_id)
         consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, corrlation_id)
         update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_payload,  corrlation_id)
-        print('Updating completed.')
+        logging.info('Updating completed.')
         response_code = '200'
 
         try:
@@ -75,29 +75,29 @@ def main(request):
         if e.response.status_code == 429:
             response_code = '500'
             logging.error(RuntimeError("Too many requests error"))
-            print(traceback.format_exc())
+            logging.info(traceback.format_exc())
             error_client.report_exception()
             if delivery_attempt == 5:
                 _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-            print("Too many requests error logging completed.")
+            logging.info("Too many requests error logging completed.")
         else:
             response_code = '102'
             logging.error(RuntimeError("Http error: "))
-            print(traceback.format_exc())
+            logging.info(traceback.format_exc())
             error_client.report_exception()
             logging.error(RuntimeError(e.response.status_code))
             logging.error(RuntimeError(e.response.reason))
             logging.error(RuntimeError(e.response.text))
             _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
             _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-            print("Http error logging completed.")
+            logging.info("Http error logging completed.")
 
     except Exception as e:
         response_code = '204'
         logging.error(RuntimeError('Data error:'))
         error_msg = ','.join(e.args) + "," + e.__doc__
         logging.error(RuntimeError(error_msg))
-        print(traceback.format_exc())
+        logging.info(traceback.format_exc())
         error_client.report_exception()
         _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
         if corrlation_id:
@@ -109,7 +109,7 @@ def _parse_request(request):
     '''parse the request and return event_type, event_sub_type, operation_type and 
        a map of event detail attributes
     '''
-    print('Preparing data for EE request.')
+    logging.info('Preparing data for EE request.')
 
     envelope = request.get_json()
 
@@ -137,7 +137,7 @@ def _parse_request(request):
     crn = event_data['eventDetails']['profile']['crn']
     preferences = event_data['eventDetails']['profile']['account']['preferences']
 
-    print('Data preparation completed.')
+    logging.info('Data preparation completed.')
     event_data = {'delivery_attempt': delivery_attempt,
                         'event_sub_types': event_sub_type,
                         'operation': operation,
@@ -239,7 +239,7 @@ def _get_header(service_path, payload, authClientId, password, correlationId):
     return header
 
 def _logging_in_mongodb(correlationId, status_code, status_message, retried_count):
-    print("---Logging in mongodb")
+    logging.info("---Logging in mongodb")
     try:
         url = os.environ['mongodb_url']
         dbname = os.environ['mongodb_dbname']
@@ -255,15 +255,15 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         print(correlationId)
         results = col.update_one({'correlationId': correlationId}, {'$push': {'status': status_object}})
 
-        print("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")
+        logging.info("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")
     except Exception as e:
         logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
-        print(traceback.format_exc())
+        logging.info(traceback.format_exc())
         return '200'
 
 def _logging_in_deadletter(event_data, error_message):
     try:
-        print("---Logging original message to dead letter topic.")
+        logging.info("---Logging original message to dead letter topic.")
         error_publisher_client = pubsub_v1.PublisherClient()
         error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
                                                             os.environ['error_topic'])
@@ -274,8 +274,8 @@ def _logging_in_deadletter(event_data, error_message):
         # Wait for the publish future to resolve before exiting.
         while not future.done():
             time.sleep(1)
-        print("---Logging original message to dead letter topic completed.")
+        logging.info("---Logging original message to dead letter topic completed.")
     except Exception as e:
         logging.error(RuntimeError("!!! There was an error while sending error message to dead letter topic. " ))
-        print(traceback.format_exc())
+        logging.info(traceback.format_exc())
         pass

@@ -14,7 +14,7 @@ setup(
     description="Python API client library for eagleeye",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/realpython/reader",
+    url="https://github.com/eagleeyeair/eagleeyeair",
     author="Cheng, Gang",
     author_email="cg1101@gmail.com",
     license="MIT",

@@ -48,20 +48,20 @@ class EagleEyeWallet(EagleEyeApi):
         return self.get(f'/wallet/invites')
     def create_wallet_invite(self, wallet_id, data):
         return self.post(f'/wallet/{wallet_id}/invite', data=data)
-    def get_wallet_id_by_invite_id(self, wallet_id, walletInviteId: str):
-        return self.get(f'/wallet/{wallet_id}/invite/{walletInviteId}')
-    def update_wallet_invite(self, wallet_id, walletInviteId: str, data):
-        return self.patch(f'/wallet/{wallet_id}/invite/{walletInviteId}', data=data)
+    def get_wallet_id_by_invite_id(self, wallet_id, wallet_invite_id: str):
+        return self.get(f'/wallet/{wallet_id}/invite/{wallet_invite_id}')
+    def update_wallet_invite(self, wallet_id, wallet_invite_id: str, data):
+        return self.patch(f'/wallet/{wallet_id}/invite/{wallet_invite_id}', data=data)
     def verify_wallet_invite(self):
         return self.get(f'/wallet/invite/verify')
-    def accept_wallet_invite(self, wallet_id, walletInviteId: str, data):
-        return self.patch(f'/wallet/{wallet_id}/invite/{walletInviteId}/accept', data=data)
-    def cancel_wallet_invite(self, wallet_id, walletInviteId: str, data):
-        return self.patch(f'/wallet/{wallet_id}/invite/{walletInviteId}/cancel', data=data)
-    def reject_wallet_invite(self, wallet_id, walletInviteId: str, data):
-        return self.patch(f'/wallet/{wallet_id}/invite/{walletInviteId}/reject', data=data)
-    def update_wallet_invite_state(self, wallet_id, walletInviteId: str, data):
-        return self.patch(f'/wallet/{wallet_id}/invite/{walletInviteId}/state', data=data)
+    def accept_wallet_invite(self, wallet_id, wallet_invite_id: str, data):
+        return self.patch(f'/wallet/{wallet_id}/invite/{wallet_invite_id}/accept', data=data)
+    def cancel_wallet_invite(self, wallet_id, wallet_invite_id: str, data):
+        return self.patch(f'/wallet/{wallet_id}/invite/{wallet_invite_id}/cancel', data=data)
+    def reject_wallet_invite(self, wallet_id, wallet_invite_id: str, data):
+        return self.patch(f'/wallet/{wallet_id}/invite/{wallet_invite_id}/reject', data=data)
+    def update_wallet_invite_state(self, wallet_id, wallet_invite_id: str, data):
+        return self.patch(f'/wallet/{wallet_id}/invite/{wallet_invite_id}/state', data=data)
     def get_wallet_identity_by_identity_value(self):
         return self.get(f'/wallet/identity')
     def get_wallet_identities_by_wallet_id(self, wallet_id,):
@@ -106,8 +106,8 @@ class EagleEyeWallet(EagleEyeApi):
         return self.get(f'/wallet/{wallet_id}/transactions')
     def create_wallet_transaction(self, wallet_id):
         return self.post(f'/wallet/{wallet_id}/transaction')
-    def get_wallet_transaction_by_reference(self, referenceId: str):
-        return self.get(f'/wallet/transaction', query={'reference': referenceId})
+    def get_wallet_transaction_by_reference(self, reference_id: str):
+        return self.get(f'/wallet/transaction', query={'reference': reference_id})
     def get_wallet_transaction_by_id(self, wallet_id, wallet_transaction_id):
         return self.get(f'/wallet/{wallet_id}/transaction/{wallet_transaction_id}')
     def update_wallet_transaction(self, wallet_id, transaction_id, data):
@@ -150,10 +150,10 @@ class EagleEyeWallet(EagleEyeApi):
         return self.post(f'/wallet/{wallet_id}/campaign/{campaign_id}/account', data=data)
     def create_wallet_programme_account(self, wallet_id, programme_id, data):
         return self.post(f'/wallet/{wallet_id}/programme/{programme_id}/account', data=data)
-    def create_wallet_scheme_account(self, wallet_id, schemeId: str, data):
-        return self.post(f'/wallet/{wallet_id}/scheme/{schemeId}/account', data=data)
-    def create_wallet_plan_account(self, wallet_id, planId: str, data):
-        return self.post(f'/wallet/{wallet_id}/plan/{planId}/account', data=data)
+    def create_wallet_scheme_account(self, wallet_id, scheme_id: str, data):
+        return self.post(f'/wallet/{wallet_id}/scheme/{scheme_id}/account', data=data)
+    def create_wallet_plan_account(self, wallet_id, plan_id: str, data):
+        return self.post(f'/wallet/{wallet_id}/plan/{plan_id}/account', data=data)
     def create_wallet_entitlement_coupon_account(self, wallet_id, parent_account_id, campaign_id, data):
         return self.post(f'/wallet/{wallet_id}/account/{parent_account_id}/campaign/{campaign_id}/account', data=data)
     def get_wallet_accounts_by_wallet_id(self, wallet_id):
@@ -180,8 +180,8 @@ class EagleEyeWallet(EagleEyeApi):
         return self.patch(f'/wallet/{wallet_id}/account/{account_id}/unredeem')
     def refund_wallet_account(self, wallet_id, account_id):
         return self.patch(f'/wallet/{wallet_id}/account/{account_id}/refund')
-    def void_wallet_account_transaction(self, wallet_id, account_id, accountTransactionId: str, data):
-        return self.patch(f'/wallet/{wallet_id}/account/{account_id}/transaction/{accountTransactionId}/void', data=data)
+    def void_wallet_account_transaction(self, wallet_id, account_id, account_transaction_id: str, data):
+        return self.patch(f'/wallet/{wallet_id}/account/{account_id}/transaction/{account_transaction_id}/void', data=data)
     def activate_wallet_account(self, wallet_id, account_id):
         return self.patch(f'/wallet/{wallet_id}/account/{account_id}/activate')
     def cancel_wallet_account(self, wallet_id, account_id):
@@ -200,8 +200,8 @@ class EagleEyeWallet(EagleEyeApi):
         return self.patch(f'/wallet/{wallet_id}/account/{account_id}/state')
     def credit_goodwill_points(self, wallet_id, account_id):
         return self.patch(f'/wallet/{wallet_id}/account/{account_id}/goodwill')
-    def calculate_points_to_be_earned(self, schemeId: str):
-        return self.get(f'/scheme/{schemeId}/earn/calculate')
+    def calculate_points_to_be_earned(self, scheme_id: str):
+        return self.get(f'/scheme/{scheme_id}/earn/calculate')
     def refresh_wallet_account(self, wallet_id, account_id, data):
         return self.patch(f'/wallet/{wallet_id}/account/{account_id}/refresh', data=data)
     def exchange(self, wallet_id, data):

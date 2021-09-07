@@ -2,9 +2,9 @@ from .eagle_eye_api import EagleEyeApi
 
 
 class EagleEyeWallet(EagleEyeApi):
-    def get_wallet_by_identity_value(self, lcn: str):
-        """Get wallet by lcn"""
-        return self.get(f"/wallet", query={"identity-value": lcn})
+    def get_wallet_by_identity_value(self, identity_value: str):
+        """Get wallet by identity value"""
+        return self.get(f"/wallet", query={"identity-value": identity_value})
 
     def create_wallet(self, data):
         return self.post(f"/wallet", data=data)
@@ -83,10 +83,7 @@ class EagleEyeWallet(EagleEyeApi):
     def get_wallet_invite(self):
         return self.get(f"/wallet/invite")
 
-    def get_wallet_invites_by_wallet_id(
-        self,
-        wallet_id,
-    ):
+    def get_wallet_invites_by_wallet_id(self, wallet_id):
         return self.get(f"/wallet/{wallet_id}/invites")
 
     def get_wallet_invites(self):
@@ -124,13 +121,16 @@ class EagleEyeWallet(EagleEyeApi):
             f"/wallet/{wallet_id}/invite/{wallet_invite_id}/state", data=data
         )
 
-    def get_wallet_identity_by_identity_value(self):
-        return self.get(f"/wallet/identity")
+    def get_wallet_identity_by_identity_value(self, name="", safe_value=""):
+        return self.get(
+            f"/wallet/identity",
+            query={
+                "name": name,
+                "safeValue": safe_value,
+            },
+        )
 
-    def get_wallet_identities_by_wallet_id(
-        self,
-        wallet_id,
-    ):
+    def get_wallet_identities_by_wallet_id(self, wallet_id):
         return self.get(f"/wallet/{wallet_id}/identities")
 
     def create_wallet_identity(self, wallet_id, data):

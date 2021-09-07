@@ -1,7 +1,11 @@
 import hashlib
 import json
+import logging
 import urllib.parse
 import urllib.request
+
+
+logger = logging.getLogger(__name__)
 
 
 class EagleEyeApi:
@@ -12,7 +16,9 @@ class EagleEyeApi:
         self.secret = secret
 
     def calculate_hash(self, server_path: str, payload):
-        # print(f'calculating hash using:\nprefix\n{self.prefix}\nserver_path\n{server_path}\npayload\n{payload}\nsecret\n{self.secret}')
+        # logger.debug(
+        #     f"calculating hash using:\nprefix\n{self.prefix}\nserver_path\n{server_path}\npayload\n{payload}\nsecret\n{self.secret}"
+        # )
         data = f"{self.prefix}{server_path}{payload}{self.secret}".encode("utf-8")
         return hashlib.sha256(data).hexdigest()
 
@@ -34,11 +40,10 @@ class EagleEyeApi:
         req.add_header("X-EES-AUTH-CLIENT-ID", self.client_id)
         req.add_header("X-EES-AUTH-HASH", hash)
         req.add_header("Content-Type", "application/json")
-        print(req)
-        print(url), print(urllib.parse.urlsplit(url))
-        print(req.headers)
-        print(f"{req.method} {req.full_url}")
-        print(hash)
+        logger.debug(url)
+        logger.debug(urllib.parse.urlsplit(url))
+        logger.info(req.headers)
+        logger.debug(f"{req.method} {req.full_url}")
         resp = urllib.request.urlopen(req)
         data = json.load(resp)
         return data

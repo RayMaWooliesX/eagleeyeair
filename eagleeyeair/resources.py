@@ -28,3 +28,6 @@ class EagleEyeResources(EagleEyeApi):
 
     def validate_campaign(self, data):
         return self.post(f"/campaigns/validate", data=data)
+
+    def list_schemes(self):
+        return self.get(f"/schemes/points")

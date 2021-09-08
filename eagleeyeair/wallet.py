@@ -23,10 +23,10 @@ class EagleEyeWallet(EagleEyeApi):
         """Get wallet's statistics"""
         return self.get(
             f"/wallet/{wallet_id}/stats",
-            query=dict(
-                dateFrom=dateFrom,
-                dateTo=dateTo,
-            ),
+            query={
+                "dateFrom": dateFrom,
+                "dateTo": dateTo,
+            },
         )
 
     def activate_wallet(self, wallet_id):
@@ -65,12 +65,12 @@ class EagleEyeWallet(EagleEyeApi):
         """Retrieve wallet's links to a private points reward banks"""
         return self.get(
             f"/wallet/{wallet_id}/bank/pointsreward/links",
-            query=dict(
-                status=status,
-                state=state,
-                validFrom=validFrom,
-                validTo=validTo,
-            ),
+            query={
+                "status": status,
+                "state": state,
+                "validFrom": validFrom,
+                "validTo": validTo,
+            },
         )
 
     def create_wallet_bank_reward_link(self, wallet_id, points_reward_bank_id, data):
@@ -101,7 +101,7 @@ class EagleEyeWallet(EagleEyeApi):
 
     def get_wallet_invite(self, guid: str, reference=""):
         """Get a wallet invite"""
-        return self.get(f"/wallet/invite", query=dict(guid=guid, reference=reference))
+        return self.get(f"/wallet/invite", query={"guid": guid, "reference": reference})
 
     def get_wallet_invites_by_wallet_id(
         self, wallet_id, state=[], status=[], type=[], limit=100, offset=0
@@ -109,18 +109,30 @@ class EagleEyeWallet(EagleEyeApi):
         """Get invites of specified wallet"""
         return self.get(
             f"/wallet/{wallet_id}/invites",
-            query=dict(
-                state=state,
-                status=status,
-                type=type,
-                limit=limit,
-                offset=offset,
-            ),
+            query={
+                "state": state,
+                "status": status,
+                "type": type,
+                "limit": limit,
+                "offset": offset,
+            },
         )
 
-    def get_wallet_invites(self, reference: str):
+    def get_wallet_invites(
+        self, reference: str, state=[], status=[], type=[], limit=100, offset=0
+    ):
         """Get wallet invites"""
-        return self.get(f"/wallet/invites", query=dict(reference=reference))
+        return self.get(
+            f"/wallet/invites",
+            query={
+                "reference": reference,
+                "state": state,
+                "status": status,
+                "type": type,
+                "limit": limit,
+                "offset": offset,
+            },
+        )
 
     def create_wallet_invite(self, wallet_id, data):
         return self.post(f"/wallet/{wallet_id}/invite", data=data)
@@ -156,15 +168,30 @@ class EagleEyeWallet(EagleEyeApi):
 
     def get_wallet_identity_by_identity_value(self, name="", safe_value=""):
         return self.get(
-            f"/wallet/identity",
-            query=dict(
-                name=name,
-                safeValue=safe_value,
-            ),
+            f"/wallet/identity", query={"name": name, "safeValue": safe_value}
         )
 
-    def get_wallet_identities_by_wallet_id(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/identities")
+    def get_wallet_identities_by_wallet_id(
+        self,
+        wallet_id,
+        state=[],
+        status=[],
+        type=[],
+        safe_value="",
+        limit=100,
+        offset=0,
+    ):
+        return self.get(
+            f"/wallet/{wallet_id}/identities",
+            query={
+                "state": state,
+                "status": status,
+                "type": type,
+                "safeValue": safe_value,
+                "limit": limit,
+                "offset": offset,
+            },
+        )
 
     def create_wallet_identity(self, wallet_id, data):
         return self.post(f"/wallet/{wallet_id}/identity", data=data)
@@ -224,8 +251,39 @@ class EagleEyeWallet(EagleEyeApi):
             f"/wallet/{wallet_id}/consumer/{consumer_id}/state", data=data
         )
 
-    def get_wallet_transactions(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/transactions")
+    def get_wallet_transactions(
+        self,
+        wallet_id,
+        wallet_transaction_ids=[],
+        type=[],
+        status=[],
+        state=[],
+        reference=[],
+        transaction_date_time="",
+        date_created="",
+        last_updated="",
+        include_children=1,
+        order_by="walletTransactionId,ASC",
+        limit=20,
+        offset=0,
+    ):
+        return self.get(
+            f"/wallet/{wallet_id}/transactions",
+            query={
+                "walletTransactionId": wallet_transaction_ids,
+                "type": type,
+                "status": status,
+                "state": state,
+                "reference": reference,
+                "transactionDateTime": transaction_date_time,
+                "dateCreated": date_created,
+                "lastUpdated": last_updated,
+                "includeChildren": include_children,
+                "orderBy": order_by,
+                "limit": limit,
+                "offset": offset,
+            },
+        )
 
     def create_wallet_transaction(self, wallet_id):
         return self.post(f"/wallet/{wallet_id}/transaction")

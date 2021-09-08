@@ -3,13 +3,14 @@ from .eagle_eye_api import EagleEyeApi
 
 class EagleEyeWallet(EagleEyeApi):
     def get_wallet_by_identity_value(self, identity_value: str):
-        """Get wallet by identity value"""
+        """Get a wallet by an identity value"""
         return self.get(f"/wallet", query={"identity-value": identity_value})
 
     def create_wallet(self, data):
         return self.post(f"/wallet", data=data)
 
     def get_wallet_by_wallet_id(self, wallet_id):
+        """Get wallet details by wallet id"""
         return self.get(f"/wallet/{wallet_id}")
 
     def update_wallet_main_properties(self, wallet_id, data):
@@ -18,8 +19,15 @@ class EagleEyeWallet(EagleEyeApi):
     def delete_wallet(self, wallet_id):
         return self.delete(f"/wallet/{wallet_id}")
 
-    def get_wallet_stats(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/stats")
+    def get_wallet_stats(self, wallet_id, dateFrom="", dateTo=""):
+        """Get wallet's statistics"""
+        return self.get(
+            f"/wallet/{wallet_id}/stats",
+            query=dict(
+                dateFrom=dateFrom,
+                dateTo=dateTo,
+            ),
+        )
 
     def activate_wallet(self, wallet_id):
         return self.patch(f"/wallet/{wallet_id}/activate")
@@ -51,8 +59,19 @@ class EagleEyeWallet(EagleEyeApi):
             f"/wallet/{wallet_id}/move/from/{old_relationship_wallet_id}/to/{new_relationship_wallet_id}"
         )
 
-    def get_wallet_bank_reward_links(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/bank/pointsreward/links")
+    def get_wallet_bank_reward_links(
+        self, wallet_id, status="", state="", validFrom="", validTo=""
+    ):
+        """Retrieve wallet's links to a private points reward banks"""
+        return self.get(
+            f"/wallet/{wallet_id}/bank/pointsreward/links",
+            query=dict(
+                status=status,
+                state=state,
+                validFrom=validFrom,
+                validTo=validTo,
+            ),
+        )
 
     def create_wallet_bank_reward_link(self, wallet_id, points_reward_bank_id, data):
         return self.post(
@@ -80,14 +99,28 @@ class EagleEyeWallet(EagleEyeApi):
             f"/wallet/{wallet_id}/link/bank/pointsreward/link/{points_reward_bank_wallet_link_id}"
         )
 
-    def get_wallet_invite(self):
-        return self.get(f"/wallet/invite")
+    def get_wallet_invite(self, guid: str, reference=""):
+        """Get a wallet invite"""
+        return self.get(f"/wallet/invite", query=dict(guid=guid, reference=reference))
 
-    def get_wallet_invites_by_wallet_id(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/invites")
+    def get_wallet_invites_by_wallet_id(
+        self, wallet_id, state=[], status=[], type=[], limit=100, offset=0
+    ):
+        """Get invites of specified wallet"""
+        return self.get(
+            f"/wallet/{wallet_id}/invites",
+            query=dict(
+                state=state,
+                status=status,
+                type=type,
+                limit=limit,
+                offset=offset,
+            ),
+        )
 
-    def get_wallet_invites(self):
-        return self.get(f"/wallet/invites")
+    def get_wallet_invites(self, reference: str):
+        """Get wallet invites"""
+        return self.get(f"/wallet/invites", query=dict(reference=reference))
 
     def create_wallet_invite(self, wallet_id, data):
         return self.post(f"/wallet/{wallet_id}/invite", data=data)
@@ -124,10 +157,10 @@ class EagleEyeWallet(EagleEyeApi):
     def get_wallet_identity_by_identity_value(self, name="", safe_value=""):
         return self.get(
             f"/wallet/identity",
-            query={
-                "name": name,
-                "safeValue": safe_value,
-            },
+            query=dict(
+                name=name,
+                safeValue=safe_value,
+            ),
         )
 
     def get_wallet_identities_by_wallet_id(self, wallet_id):
@@ -169,10 +202,11 @@ class EagleEyeWallet(EagleEyeApi):
         return self.post(f"/wallet/{wallet_id}/consumer", data=data)
 
     def get_wallet_consumer(self, wallet_id):
-        """Return wallet which id is given"""
+        """Get wallet consumer details"""
         return self.get(f"/wallet/{wallet_id}/consumer")
 
     def get_wallet_consumer_by_consumer_id(self, wallet_id, consumer_id):
+        """Get wallet consumer details for a specific wallet"""
         return self.get(f"/wallet/{wallet_id}/consumer/{consumer_id}")
 
     def update_wallet_consumer(self, wallet_id, consumer_id, data):

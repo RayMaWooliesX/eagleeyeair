@@ -21,6 +21,7 @@ from google.cloud import pubsub_v1
 from google.cloud import error_reporting
 from flask import request
 
+
 def main(request):
     """Background Cloud Function to be triggered by Pub/Sub.
     Args:

@@ -65,10 +65,10 @@ jobs:
             kv/data/${{ env.gprojectid }}/GOOGLE_CREDENTIALS GOOGLE_CREDENTIALS ;
             kv/data/apps/wx-p24-ee-api/credentials user | EES_AUTH_CLIENT_ID ;
             kv/data/apps/wx-p24-ee-api/credentials password | EES_AUTH_CLIENT_SECRET ;
-            kv/data/apps/wx-p24-ee-api/urls EES_API_PREFIX | EES_API_PREFIX
-            kv/data/apps/wx-p24-ee-api/urls EES_POS_API_HOST | EES_POS_API_HOST
-            kv/data/apps/wx-p24-ee-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST
-            kv/data/apps/wx-p24-ee-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST
+            kv/data/apps/wx-p24-ee-api/urls EES_API_PREFIX | EES_API_PREFIX ;
+            kv/data/apps/wx-p24-ee-api/urls EES_POS_API_HOST | EES_POS_API_HOST ;
+            kv/data/apps/wx-p24-ee-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST ;
+            kv/data/apps/wx-p24-ee-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST ;
             kv/data/cloud-functions/${{ env.gcf_name }} trigger_topic ;
             kv/data/cloud-functions/${{ env.gcf_name }} max_function_instances ;
             kv/data/cloud-functions/${{ env.gcf_name }} error_topic ;

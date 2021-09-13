@@ -2,5 +2,6 @@
     "dbname",
     "mongodb"
 ],
-"python.pythonPath": ""
+"python.pythonPath": "",
+"python.formatting.provider": "yapf"
 }

@@ -5,7 +5,7 @@ on:
     branches-ignore:
       - "feature/dependencies"
     paths:
-      - "main.py"
+      - 'main_cards.py'
 jobs:
   init:
     runs-on: ubuntu-latest

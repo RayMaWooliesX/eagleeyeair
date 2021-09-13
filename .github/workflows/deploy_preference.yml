@@ -5,7 +5,8 @@ on:
     branches-ignore:
       - "feature/dependencies"
     paths:
-      - "main.py"
+      - "main_preference.py"
+      - "requirements.txt"
 jobs:
   init:
     runs-on: ubuntu-latest
@@ -76,3 +77,29 @@ jobs:
         with:
           project_id: ${{ env.gprojectid }}
           service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
+      - name: Deploy Function
+        run: >-
+          gcloud functions deploy ${{ env.gcf_name }} 
+          --region=australia-southeast1
+          --memory=256MB
+          --runtime=python38
+          --trigger-http 
+          --entry-point=main_preference 
+          --max-instances=${{ steps.vault.outputs.max_function_instances }}
+          --ingress-settings=all
+          --vpc-connector=wx-p24-loyalty-api-pref
+          --egress-settings=all
+          --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
+          --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
+          --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}
+          --set-env-vars ee_api_url=${{ steps.vault.outputs.ee_api_url }}
+          --set-env-vars ee_api_user=${{ steps.vault.outputs.ee_api_user }}
+          --set-env-vars ee_api_password=${{ steps.vault.outputs.ee_api_password }}
+          --set-env-vars ee_get_wallet_service_path='/wallet?identity-value={{identityValueCRN}}'
+          --set-env-vars ee_get_consumer_service_path='/wallet/{{walletId}}/consumer'
+          --set-env-vars ee_update_consumer_service_path='/wallet/{{walletId}}/consumer/{{consumerId}}'
+          --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
+          --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
+          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
+          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
+          --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

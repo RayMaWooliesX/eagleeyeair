@@ -21,7 +21,7 @@ from google.cloud import pubsub_v1
 from google.cloud import error_reporting
 from flask import request
 
-def main(request):
+def main_preference(request):
     """Background Cloud Function to be triggered by Pub/Sub.
     Args:
         event (dict):  The dictionary with data specific to this type of

@@ -1,4 +1,4 @@
-name: deploy
+name: deploy Preference
 
 on:
   push:
@@ -77,13 +77,14 @@ jobs:
         with:
           project_id: ${{ env.gprojectid }}
           service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
-      - name: Deploy Function
+      - name: Deploy Function ${{ env.gcf_name }}
         run: >-
           gcloud functions deploy ${{ env.gcf_name }} 
           --region=australia-southeast1
           --memory=256MB
           --runtime=python38
           --trigger-http 
+          --source=src_preference/
           --entry-point=main_preference 
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
           --ingress-settings=all

@@ -1,4 +1,4 @@
-name: deploy
+name: deploy cards
 
 on:
   push:
@@ -84,6 +84,7 @@ jobs:
           --memory=256MB
           --runtime=python38
           --trigger-http 
+          --source=src_cards/
           --entry-point=main_cards
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
           --ingress-settings=all

@@ -50,7 +50,7 @@ def main(request):
         preferences = event_data.get('preferences')
         event_data_str = event_data.get('event_data_str')
 
-        
+
         preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 
         logging.info("Data preparation completed.")

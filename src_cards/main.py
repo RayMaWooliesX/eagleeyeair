@@ -46,19 +46,19 @@ def main_cards(request):
 
     try:
         event_data, delivery_attempt = _parse_request(request)
-        wallet_id = eagleeyeair.wallet.get_wallet_by_identity_value(event_data["profile"]["crn"])["walletId"]
+        wallet_id = eagleeyeair.wallet.get_wallet_by_identity_value(event_data["eventDetails"]["profile"]["crn"])["walletId"]
         ###temp code
         wallet_api = ee_api(wallet_host, prefix, client_id, secret)
         ###
         identities = wallet_api.get_wallet_identities_by_wallet_id_with_no_query(wallet_id)["results"]
         identity_id = ""
         for identity in identities:
-            if identity["value"] == event_data["profile"]["cardNumber"]:
+            if identity["value"] == event_data["eventDetails"]["profile"]["cardNumber"]:
                 identity_id = identity["identityId"]
         eagleeyeair.wallet.update_wallet_identity_status_suspended(wallet_id, identity_id)
 
         if event_data["eventSubType"] == "replace":
-            data = _prepare_lcn_payload(event_data["profile"]["newCardNumber"])
+            data = _prepare_lcn_payload(event_data["eventDetails"]["profile"]["newCardNumber"])
             eagleeyeair.wallet.create_wallet_identity(wallet_id,data)
         response_code = '200'
         return '200'

@@ -41,7 +41,7 @@ def main_cards(request):
         The response text, or any set of values that can be turned into a
         Response object using `make_response`
         <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
-    """
+    """ 
     error_client = error_reporting.Client()
 
     try:

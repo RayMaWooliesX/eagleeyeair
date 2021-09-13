@@ -95,7 +95,9 @@ def _prepare_lcn_payload(lcn_num):
     return {
             "type": "LCN",
             "friendlyName": "Loyalty Card Number",
-            "value": lcn_num
+            "value": lcn_num,
+            "state": "REGISTERED",
+            "status": "ACTIVE"
             }
 
 def _parse_request(request):

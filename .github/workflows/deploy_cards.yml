@@ -63,14 +63,14 @@ jobs:
           caCertificate: ${{ secrets.VAULT_CA }}
           secrets: |
             kv/data/${{ env.gprojectid }}/GOOGLE_CREDENTIALS GOOGLE_CREDENTIALS ;
+            kv/data/apps/wx-p24-ee-api/credentials user | EES_AUTH_CLIENT_ID ;
+            kv/data/apps/wx-p24-ee-api/credentials password | EES_AUTH_CLIENT_SECRET ;
+            kv/data/apps/wx-p24-ee-api/urls EES_API_PREFIX | EES_API_PREFIX
+            kv/data/apps/wx-p24-ee-api/urls EES_POS_API_HOST | EES_POS_API_HOST
+            kv/data/apps/wx-p24-ee-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST
+            kv/data/apps/wx-p24-ee-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST
             kv/data/cloud-functions/${{ env.gcf_name }} trigger_topic ;
             kv/data/cloud-functions/${{ env.gcf_name }} max_function_instances ;
-            kv/data/cloud-functions/${{ env.gcf_name }} ee_api_url ;
-            kv/data/apps/wx-p24-ee-api/credentials user | ee_api_user ;
-            kv/data/apps/wx-p24-ee-api/credentials password | ee_api_password ;
-            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp url | mongodb_url ;
-            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp dbname | mongodb_dbname ;
-            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp collection_cfp_change_status | mongodb_collection ;
             kv/data/cloud-functions/${{ env.gcf_name }} error_topic ;
       - name: Set up gcloud Cloud SDK environment
         uses: google-github-actions/setup-gcloud@v0.2.0
@@ -92,14 +92,11 @@ jobs:
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
           --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
           --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}
-          --set-env-vars ee_api_url=${{ steps.vault.outputs.ee_api_url }}
-          --set-env-vars ee_api_user=${{ steps.vault.outputs.ee_api_user }}
-          --set-env-vars ee_api_password=${{ steps.vault.outputs.ee_api_password }}
-          --set-env-vars ee_get_wallet_service_path='/wallet?identity-value={{identityValueCRN}}'
-          --set-env-vars ee_get_consumer_service_path='/wallet/{{walletId}}/consumer'
-          --set-env-vars ee_update_consumer_service_path='/wallet/{{walletId}}/consumer/{{consumerId}}'
+          --set-env-vars EES_AUTH_CLIENT_ID=${{ steps.vault.outputs.EES_AUTH_CLIENT_ID }}
+          --set-env-vars EES_AUTH_CLIENT_SECRET=${{ steps.vault.outputs.EES_AUTH_CLIENT_SECRET }}
+          --set-env-vars EES_API_PREFIX=${{ steps.vault.outputs.EES_API_PREFIX }}
+          --set-env-vars EES_POS_API_HOST=${{ steps.vault.outputs.EES_POS_API_HOST }}
+          --set-env-vars EES_RESOURCES_API_HOST=${{ steps.vault.outputs.EES_RESOURCES_API_HOST }}
+          --set-env-vars EES_WALLET_API_HOST=${{ steps.vault.outputs.EES_WALLET_API_HOST }}
           --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
-          --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
-          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
-          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

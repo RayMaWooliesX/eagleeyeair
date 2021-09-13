@@ -9,6 +9,7 @@ import os
 import base64
 import hashlib
 import time
+
 from datetime import datetime, timezone
 import pytz
 import json
@@ -21,6 +22,14 @@ from google.cloud import pubsub_v1
 from google.cloud import error_reporting
 from flask import request
 
+import eagleeyeair
+
+client_id = os.environ.get("EES_AUTH_CLIENT_ID", "")
+secret = os.environ.get("EES_AUTH_CLIENT_SECRET", "")
+prefix = os.environ.get("EES_API_PREFIX", "")
+pos_host = os.environ.get("EES_POS_API_HOST", "")
+resources_host = os.environ.get("EES_RESOURCES_API_HOST", "")
+wallet_host = os.environ.get("EES_WALLET_API_HOST", "")
 
 def main_cards(request):
     """ Responds to an HTTP request using data from the request body parsed
@@ -33,44 +42,25 @@ def main_cards(request):
         Response object using `make_response`
         <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
     """
-    # response_code = '200'
     error_client = error_reporting.Client()
 
     try:
-        logging.info("Preparing preference data from event data.")
-        url = os.environ['ee_api_url']
-        authClientId = os.environ['ee_api_user']
-        password = os.environ['ee_api_password']
+        event_data, delivery_attempt = _parse_request(request)
+        wallet_id = eagleeyeair.wallet.get_wallet_by_identity_value(event_data["profile"]["crn"])["walletId"]
+        ###temp code
+        wallet_api = ee_api(wallet_host, prefix, client_id, secret)
+        ###
+        identities = wallet_api.get_wallet_identities_by_wallet_id_with_no_query(wallet_id)["results"]
+        identity_id = ""
+        for identity in identities:
+            if identity["value"] == event_data["profile"]["cardNumber"]:
+                identity_id = identity["identityId"]
+        eagleeyeair.wallet.update_wallet_identity_status_suspended(wallet_id, identity_id)
 
-        event_data = _parse_request(request)
-        delivery_attempt = event_data.get('delivery_attempt')
-        event_sub_type = event_data.get('event_sub_types')
-        operation = event_data.get('operation')
-        tracking_id = event_data.get('tracking_id')
-        corrlation_id = event_data.get('correlation_id')
-        crn = event_data.get('crn')
-        preferences = event_data.get('preferences')
-        event_data_str = event_data.get('event_data_str')
-
-
-        preference_payload = _prepare_preference_payload(event_sub_type, preferences)
-
-        logging.info("Data preparation completed.")
-
-        logging.info("Calling EE APIs to update consumer preference.")
-        wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, corrlation_id)
-        consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, corrlation_id)
-        update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_payload,  corrlation_id)
-        logging.info('Updating completed.')
+        if event_data["eventSubType"] == "replace":
+            data = _prepare_lcn_payload(event_data["profile"]["newCardNumber"])
+            eagleeyeair.wallet.create_wallet_identity(wallet_id,data)
         response_code = '200'
-
-        try:
-            _logging_in_mongodb(corrlation_id, '200', 'OK', delivery_attempt)
-        except Exception as e:
-            logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
-            print(traceback.format_exc())
-            error_client.report_exception()
-        
         return '200'
 
     except requests.exceptions.RequestException as e:
@@ -79,21 +69,15 @@ def main_cards(request):
             logging.error(RuntimeError("Too many requests error"))
             logging.info(traceback.format_exc())
             error_client.report_exception()
-            if delivery_attempt == 5:
-                _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
             logging.info("Too many requests error logging completed.")
         else:
             response_code = '102'
             logging.error(RuntimeError("Http error: "))
             logging.info(traceback.format_exc())
             error_client.report_exception()
-            logging.error(RuntimeError(e.response.status_code))
-            logging.error(RuntimeError(e.response.reason))
-            logging.error(RuntimeError(e.response.text))
-            _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
-            _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
+            logging.error(RuntimeError)
+            _logging_in_deadletter(json.dumps(event_data), e.response.reason)
             logging.info("Http error logging completed.")
-
     except Exception as e:
         response_code = '204'
         logging.error(RuntimeError('Data error:'))
@@ -101,55 +85,29 @@ def main_cards(request):
         logging.error(RuntimeError(error_msg))
         logging.info(traceback.format_exc())
         error_client.report_exception()
-        _logging_in_deadletter(event_data_str.decode('utf-8'), error_msg)
-        if corrlation_id:
-            _logging_in_mongodb( corrlation_id, '400', error_msg, delivery_attempt)
+        _logging_in_deadletter(json.dumps(event_data), error_msg)
     finally:
         return response_code
 
+def _prepare_lcn_payload(lcn_num):
+    return 
+    {
+        "type": "LCN",
+        "friendlyName": "Loyalty Card Number",
+        "value": lcn_num
+    }
+
 def _parse_request(request):
-    '''parse the request and return event_type, event_sub_type, operation_type and 
-       a map of event detail attributes
+    '''parse the request and return the request data in jason format
     '''
     logging.info('Preparing data for EE request.')
-
     envelope = request.get_json()
-
     message = envelope['message']
     delivery_attempt = envelope['deliveryAttempt']
     event_data_str = base64.b64decode(message['data'])
     event_data = json.loads(event_data_str)
-
-    event_type = event_data['eventType']
-    if event_type != 'preferences':
-        raise Exception('Event type should be "preferences"! But got ' + event_type)
-
-    event_sub_types = {'redemption', 'communication'}
-    event_sub_type = event_data['eventSubType']
-    if event_sub_type not in event_sub_types:
-        raise Exception('Unexpected sub event type! ' + event_sub_type)
-    
-    operations = ['create', 'update']
-    operation = event_data['operation']
-    if operation not in operations:
-        raise Exception('Incorrect operation value! ' + operation)
-
-    tracking_id = event_data['eventDetails']['trackingId']
-    correlation_id = event_data['eventDetails']['correlationId']
-    crn = event_data['eventDetails']['profile']['crn']
-    preferences = event_data['eventDetails']['profile']['account']['preferences']
-
-    logging.info('Data preparation completed.')
-    event_data = {'delivery_attempt': delivery_attempt,
-                        'event_sub_types': event_sub_type,
-                        'operation': operation,
-                        'tracking_id': tracking_id, 
-                        'correlation_id': correlation_id, 
-                        'crn': crn, 
-                        'preferences': preferences,
-                        'event_data_str': event_data_str}
-
-    return event_data 
+    logging.info('Completed preparing data for EE request.')
+    return event_data, delivery_attempt
 
 def _prepare_preference_payload(event_sub_type, preferences):
 
@@ -263,13 +221,14 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         return '200'
 
 def _logging_in_deadletter(event_data, error_message):
+
     try:
         logging.info("---Logging original message to dead letter topic.")
         error_publisher_client = pubsub_v1.PublisherClient()
         error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
                                                             os.environ['error_topic'])
         user = os.environ['FUNCTION_NAME']
-        future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8") ,
+        future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8"),
                                                                         user=user,
                                                                         error = error_message)
         # Wait for the publish future to resolve before exiting.
@@ -280,3 +239,13 @@ def _logging_in_deadletter(event_data, error_message):
         logging.error(RuntimeError("!!! There was an error while sending error message to dead letter topic. " ))
         logging.info(traceback.format_exc())
         pass
+
+
+class ee_api(eagleeyeair.EagleEyeWallet):
+    def get_wallet_identities_by_wallet_id_with_no_query(self,
+        wallet_id,
+        type=[]
+    ):
+        return self.get(
+            f"/wallet/{wallet_id}/identities"
+        )

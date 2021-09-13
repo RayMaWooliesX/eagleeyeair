@@ -5,8 +5,8 @@ on:
     branches-ignore:
       - "feature/dependencies"
     paths:
-      - "main_cards.py"
-      - "requirements.txt"
+      - "src_cards/main.py"
+      - "src_cards/requirements.txt"
 jobs:
   init:
     runs-on: ubuntu-latest

@@ -1,0 +1,9 @@
+# Function dependencies, for example:
+# package>=version
+urllib3
+requests
+google-cloud-pubsub
+google-cloud-error-reporting
+pymongo[srv]
+flask
+pytz

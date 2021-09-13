@@ -5,8 +5,8 @@ on:
     branches-ignore:
       - "feature/dependencies"
     paths:
-      - "main_preference.py"
-      - "requirements.txt"
+      - "src_preference/main.py"
+      - "src_preference/requirements.txt"
 jobs:
   init:
     runs-on: ubuntu-latest

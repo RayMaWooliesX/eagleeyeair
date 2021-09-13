@@ -23,14 +23,15 @@ from flask import request
 
 
 def main_cards(request):
-    """Background Cloud Function to be triggered by Pub/Sub.
+    """ Responds to an HTTP request using data from the request body parsed
+    according to the "content-type" header.
     Args:
-        event (dict):  The dictionary with data specific to this type of
-        event. The `data` field contains the PubsubMessage message. The
-        `attributes` field will contain custom attributes if there are any.
-        context (google.cloud.functions.Context): The Cloud Functions event
-        metadata. The `event_id` field contains the Pub/Sub message ID. The
-        `timestamp` field contains the publish time.
+        request (flask.Request): The request object.
+        <https://flask.palletsprojects.com/en/1.1.x/api/#incoming-request-data>
+    Returns:
+        The response text, or any set of values that can be turned into a
+        Response object using `make_response`
+        <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
     """
     # response_code = '200'
     error_client = error_reporting.Client()

@@ -107,32 +107,32 @@ class EagleEyeWallet(EagleEyeApi):
         self, wallet_id, state=[], status=[], type=[], limit=100, offset=0
     ):
         """Get invites of specified wallet"""
-        return self.get(
-            f"/wallet/{wallet_id}/invites",
-            query={
-                "state": state,
-                "status": status,
-                "type": type,
-                "limit": limit,
-                "offset": offset,
-            },
-        )
+        query = dict(limit=limit, offset=offset)
+        if state != []:
+            query["state"] = state
+        if status != []:
+            query["status"] = status
+        if type != []:
+            query["type"] = type
+        return self.get(f"/wallet/{wallet_id}/invites", query=query)
 
     def get_wallet_invites(
         self, reference: str, state=[], status=[], type=[], limit=100, offset=0
     ):
         """Get wallet invites"""
-        return self.get(
-            f"/wallet/invites",
-            query={
-                "reference": reference,
-                "state": state,
-                "status": status,
-                "type": type,
-                "limit": limit,
-                "offset": offset,
-            },
-        )
+        query = {
+            "reference": reference,
+            "limit": limit,
+            "offset": offset,
+        }
+        query = dict(limit=limit, offset=offset)
+        if state != []:
+            query["state"] = state
+        if status != []:
+            query["status"] = status
+        if type != []:
+            query["type"] = type
+        return self.get(f"/wallet/invites", query=query)
 
     def create_wallet_invite(self, wallet_id, data):
         return self.post(f"/wallet/{wallet_id}/invite", data=data)
@@ -181,17 +181,19 @@ class EagleEyeWallet(EagleEyeApi):
         limit=100,
         offset=0,
     ):
-        return self.get(
-            f"/wallet/{wallet_id}/identities",
-            query={
-                "state": state,
-                "status": status,
-                "type": type,
-                "safeValue": safe_value,
-                "limit": limit,
-                "offset": offset,
-            },
-        )
+        query = {
+            "safeValue": safe_value,
+            "limit": limit,
+            "offset": offset,
+        }
+        query = dict(limit=limit, offset=offset)
+        if state != []:
+            query["state"] = state
+        if status != []:
+            query["status"] = status
+        if type != []:
+            query["type"] = type
+        return self.get(f"/wallet/{wallet_id}/identities", query=query)
 
     def create_wallet_identity(self, wallet_id, data):
         return self.post(f"/wallet/{wallet_id}/identity", data=data)
@@ -267,22 +269,29 @@ class EagleEyeWallet(EagleEyeApi):
         limit=20,
         offset=0,
     ):
+        query = {
+            "transactionDateTime": transaction_date_time,
+            "dateCreated": date_created,
+            "lastUpdated": last_updated,
+            "includeChildren": include_children,
+            "orderBy": order_by,
+            "limit": limit,
+            "offset": offset,
+        }
+        query = dict(limit=limit, offset=offset)
+        if wallet_transaction_ids != []:
+            query["walletTransactionId"] = wallet_transaction_ids
+        if state != []:
+            query["state"] = state
+        if status != []:
+            query["status"] = status
+        if type != []:
+            query["type"] = type
+        if reference != []:
+            query["type"] = reference
         return self.get(
             f"/wallet/{wallet_id}/transactions",
-            query={
-                "walletTransactionId": wallet_transaction_ids,
-                "type": type,
-                "status": status,
-                "state": state,
-                "reference": reference,
-                "transactionDateTime": transaction_date_time,
-                "dateCreated": date_created,
-                "lastUpdated": last_updated,
-                "includeChildren": include_children,
-                "orderBy": order_by,
-                "limit": limit,
-                "offset": offset,
-            },
+            query=query,
         )
 
     def create_wallet_transaction(self, wallet_id):

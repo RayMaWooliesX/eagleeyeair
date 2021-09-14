@@ -8,6 +8,24 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 
+class EagleEyeApiError(RuntimeError):
+    def __init__(self, e: urllib.error.HTTPError):
+        self.status_code = e.code
+        self.reason = e.reason
+        try:
+            data = json.load(e)
+            self.error_code = data["errorCode"]
+            self.error_message = data["errorMessage"]
+        except:
+            self.error_code = ""
+            self.error_message = "Unknown Error"
+
+    def __str__(self):
+        return json.dumps(
+            dict(error_code=self.error_code, error_message=self.error_message)
+        )
+
+
 class EagleEyeApi:
     def __init__(self, host, prefix, client_id, secret):
         self.host = host
@@ -44,8 +62,11 @@ class EagleEyeApi:
         logger.debug(urllib.parse.urlsplit(url))
         logger.info(req.headers)
         logger.debug(f"{req.method} {req.full_url}")
-        resp = urllib.request.urlopen(req)
-        data = json.load(resp)
+        try:
+            resp = urllib.request.urlopen(req)
+            data = json.load(resp)
+        except urllib.error.HTTPError as e:
+            raise EagleEyeApiError(e)
         return data
 
     def get(self, url_template, params={}, query={}, headers={}):

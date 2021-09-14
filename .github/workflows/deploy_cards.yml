@@ -7,6 +7,7 @@ on:
     paths:
       - "src_cards/main.py"
       - "src_cards/requirements.txt"
+      - ".github/workflows/deploy_cards.yml"
 jobs:
   init:
     runs-on: ubuntu-latest

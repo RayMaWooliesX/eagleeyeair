@@ -4,7 +4,8 @@ from .eagle_eye_api import EagleEyeApi
 class EagleEyeWallet(EagleEyeApi):
     def get_wallet_by_identity_value(self, identity_value: str):
         """Get a wallet by an identity value"""
-        return self.get(f"/wallet", query={"identity-value": identity_value})
+        query = {"identity-value": identity_value}
+        return self.get(f"/wallet", query=query)
 
     def create_wallet(self, data):
         return self.post(f"/wallet", data=data)
@@ -19,15 +20,14 @@ class EagleEyeWallet(EagleEyeApi):
     def delete_wallet(self, wallet_id):
         return self.delete(f"/wallet/{wallet_id}")
 
-    def get_wallet_stats(self, wallet_id, dateFrom="", dateTo=""):
+    def get_wallet_stats(self, wallet_id, date_from="", date_to=""):
         """Get wallet's statistics"""
-        return self.get(
-            f"/wallet/{wallet_id}/stats",
-            query={
-                "dateFrom": dateFrom,
-                "dateTo": dateTo,
-            },
-        )
+        query = {}
+        if date_from != "":
+            query["dateFrom"] = date_from
+        if date_to != "":
+            query["dateTo"] = date_to
+        return self.get(f"/wallet/{wallet_id}/stats", query=query)
 
     def activate_wallet(self, wallet_id):
         return self.patch(f"/wallet/{wallet_id}/activate")
@@ -60,18 +60,19 @@ class EagleEyeWallet(EagleEyeApi):
         )
 
     def get_wallet_bank_reward_links(
-        self, wallet_id, status="", state="", validFrom="", validTo=""
+        self, wallet_id, status="", state="", valid_from="", valid_to=""
     ):
         """Retrieve wallet's links to a private points reward banks"""
-        return self.get(
-            f"/wallet/{wallet_id}/bank/pointsreward/links",
-            query={
-                "status": status,
-                "state": state,
-                "validFrom": validFrom,
-                "validTo": validTo,
-            },
-        )
+        query = {}
+        if status != "":
+            query["status"] = status
+        if state != "":
+            query["state"] = state
+        if valid_from != "":
+            query["validFrom"] = valid_from
+        if valid_to != "":
+            query["validTo"] = valid_to
+        return self.get(f"/wallet/{wallet_id}/bank/pointsreward/links", query=query)
 
     def create_wallet_bank_reward_link(self, wallet_id, points_reward_bank_id, data):
         return self.post(
@@ -101,37 +102,45 @@ class EagleEyeWallet(EagleEyeApi):
 
     def get_wallet_invite(self, guid: str, reference=""):
         """Get a wallet invite"""
-        return self.get(f"/wallet/invite", query={"guid": guid, "reference": reference})
+        query = {"guid": guid}
+        if reference != "":
+            query["reference"] = reference
+        return self.get(f"/wallet/invite", query=query)
 
     def get_wallet_invites_by_wallet_id(
-        self, wallet_id, state=[], status=[], type=[], limit=100, offset=0
+        self, wallet_id, state=[], status=[], type=[], limit=20, offset=0
     ):
         """Get invites of specified wallet"""
-        query = dict(limit=limit, offset=offset)
+        query = {}
         if state != []:
             query["state"] = state
         if status != []:
             query["status"] = status
         if type != []:
             query["type"] = type
+        if limit != 20:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
         return self.get(f"/wallet/{wallet_id}/invites", query=query)
 
     def get_wallet_invites(
-        self, reference: str, state=[], status=[], type=[], limit=100, offset=0
+        self, reference: str, guid="", state=[], status=[], type=[], limit=20, offset=0
     ):
         """Get wallet invites"""
-        query = {
-            "reference": reference,
-            "limit": limit,
-            "offset": offset,
-        }
-        query = dict(limit=limit, offset=offset)
+        query = {"reference": reference}
+        if guid != "":
+            query["guid"] = guid
         if state != []:
             query["state"] = state
         if status != []:
             query["status"] = status
         if type != []:
             query["type"] = type
+        if limit != 20:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
         return self.get(f"/wallet/invites", query=query)
 
     def create_wallet_invite(self, wallet_id, data):
@@ -167,9 +176,12 @@ class EagleEyeWallet(EagleEyeApi):
         )
 
     def get_wallet_identity_by_identity_value(self, name="", safe_value=""):
-        return self.get(
-            f"/wallet/identity", query={"name": name, "safeValue": safe_value}
-        )
+        query = {}
+        if name != "":
+            query["name"] = name
+        if safe_value != "":
+            query["safeValue"] = safe_value
+        return self.get(f"/wallet/identity", query=query)
 
     def get_wallet_identities_by_wallet_id(
         self,
@@ -181,18 +193,19 @@ class EagleEyeWallet(EagleEyeApi):
         limit=100,
         offset=0,
     ):
-        query = {
-            "safeValue": safe_value,
-            "limit": limit,
-            "offset": offset,
-        }
-        query = dict(limit=limit, offset=offset)
+        query = {}
         if state != []:
             query["state"] = state
         if status != []:
             query["status"] = status
         if type != []:
             query["type"] = type
+        if safe_value != "":
+            query["safeValue"] = safe_value
+        if limit != 100:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
         return self.get(f"/wallet/{wallet_id}/identities", query=query)
 
     def create_wallet_identity(self, wallet_id, data):
@@ -264,41 +277,44 @@ class EagleEyeWallet(EagleEyeApi):
         transaction_date_time="",
         date_created="",
         last_updated="",
-        include_children=1,
-        order_by="walletTransactionId,ASC",
+        include_children="",
+        order_by="",
         limit=20,
         offset=0,
     ):
-        query = {
-            "transactionDateTime": transaction_date_time,
-            "dateCreated": date_created,
-            "lastUpdated": last_updated,
-            "includeChildren": include_children,
-            "orderBy": order_by,
-            "limit": limit,
-            "offset": offset,
-        }
-        query = dict(limit=limit, offset=offset)
+        query = {}
         if wallet_transaction_ids != []:
             query["walletTransactionId"] = wallet_transaction_ids
-        if state != []:
-            query["state"] = state
-        if status != []:
-            query["status"] = status
         if type != []:
             query["type"] = type
+        if status != []:
+            query["status"] = status
+        if state != []:
+            query["state"] = state
         if reference != []:
             query["type"] = reference
-        return self.get(
-            f"/wallet/{wallet_id}/transactions",
-            query=query,
-        )
+        if transaction_date_time != "":
+            query["transactionDateTime"] = transaction_date_time
+        if date_created != "":
+            query["dateCreated"] = date_created
+        if last_updated != "":
+            query["lastUpdated"] = last_updated
+        if include_children != "":
+            query["includeChildren"] = include_children
+        if order_by != "":
+            query["orderBy"] = order_by
+        if limit != 20:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
+        return self.get(f"/wallet/{wallet_id}/transactions", query=query)
 
     def create_wallet_transaction(self, wallet_id):
         return self.post(f"/wallet/{wallet_id}/transaction")
 
     def get_wallet_transaction_by_reference(self, reference_id: str):
-        return self.get(f"/wallet/transaction", query={"reference": reference_id})
+        query = {"reference": reference_id}
+        return self.get(f"/wallet/transaction", query=query)
 
     def get_wallet_transaction_by_id(self, wallet_id, wallet_transaction_id):
         return self.get(f"/wallet/{wallet_id}/transaction/{wallet_transaction_id}")
@@ -402,14 +418,117 @@ class EagleEyeWallet(EagleEyeApi):
             data=data,
         )
 
-    def get_wallet_accounts_by_wallet_id(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/accounts")
+    def get_wallet_accounts_by_wallet_id(
+        self,
+        wallet_id,
+        state=[],
+        status=[],
+        type=[],
+        client_type=[],
+        account_id=[],
+        parent_account_id="",
+        valid_to="",
+        valid_from="",
+        date_created="",
+        last_updated="",
+        campaign_status="",
+        tokens="",
+        limit=20,
+        offset=0,
+        order_by="",
+    ):
+        query = {}
+        if state != []:
+            query["state"] = state
+        if status != []:
+            query["status"] = status
+        if type != []:
+            type["type"] = type
+        if client_type != []:
+            type["clientType"] = client_type
+        if account_id != []:
+            query["accountId"] = account_id
+        if parent_account_id != "":
+            query["parentAccountId"] = parent_account_id
+        if valid_to != "":
+            query["validTo"] = valid_to
+        if valid_from != "":
+            query["validFrom"] = valid_from
+        if date_created != "":
+            query["dateCreated"] = date_created
+        if last_updated != "":
+            query["lastUpdated"] = last_updated
+        if campaign_status != 1:
+            query["campaign-status"] = campaign_status
+        if tokens != "":
+            query["tokens"] = tokens
+        if limit != 20:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
+        if order_by != "":
+            query["orderBy"] = order_by
+        return self.get(f"/wallet/{wallet_id}/accounts", query=query)
 
-    def get_wallet_accounts_by_identity_value(self):
-        return self.get(f"/wallet/accounts")
+    def get_wallet_accounts_by_identity_value(
+        self,
+        identity_value="",
+        state=[],
+        status=[],
+        type=[],
+        client_type=[],
+        account_id=[],
+        parent_account_id="",
+        valid_to="",
+        valid_from="",
+        date_created="",
+        last_updated="",
+        campaign_status="",
+        tokens="",
+        limit=20,
+        offset=0,
+        order_by="",
+    ):
+        query = {}
+        if identity_value != "":
+            query["identity-value"] = identity_value
+        if state != []:
+            query["state"] = state
+        if status != []:
+            query["status"] = status
+        if type != []:
+            type["type"] = type
+        if client_type != []:
+            type["clientType"] = client_type
+        if account_id != []:
+            query["accountId"] = account_id
+        if parent_account_id != "":
+            query["parentAccountId"] = parent_account_id
+        if valid_to != "":
+            query["validTo"] = valid_to
+        if valid_from != "":
+            query["validFrom"] = valid_from
+        if date_created != "":
+            query["dateCreated"] = date_created
+        if last_updated != "":
+            query["lastUpdated"] = last_updated
+        if campaign_status != "":
+            query["campaign-status"] = campaign_status
+        if tokens != "":
+            query["tokens"] = tokens
+        if limit != 20:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
+        if order_by != "":
+            query["orderBy"] = order_by
+        return self.get(f"/wallet/accounts", query=query)
 
-    def get_wallet_account(self, wallet_id, account_id):
-        return self.get(f"/wallet/{wallet_id}/account/{account_id}")
+    def get_wallet_account(self, wallet_id, account_id, tokens=""):
+        query = {}
+        if tokens != "":
+            query["tokens"] = tokens
+        return self.get(f"/wallet/{wallet_id}/account/{account_id}", query=query)
 
     def update_wallet_account(self, wallet_id, account_id, data):
         return self.patch(f"/wallet/{wallet_id}/account/{account_id}", data=data)
@@ -420,8 +539,13 @@ class EagleEyeWallet(EagleEyeApi):
     def earn_points(self, wallet_id, account_id, data):
         return self.patch(f"/wallet/{wallet_id}/account/{account_id}/earn", data=data)
 
-    def debit_wallet_account(self, wallet_id, account_id, data):
-        return self.patch(f"/wallet/{wallet_id}/account/{account_id}/debit", data=data)
+    def debit_wallet_account(self, wallet_id, account_id, include, data):
+        query = {}
+        if include != "":
+            query["include"] = include
+        return self.patch(
+            f"/wallet/{wallet_id}/account/{account_id}/debit", query=query, data=data
+        )
 
     def load_wallet_account(self, wallet_id, account_id, data):
         return self.patch(f"/wallet/{wallet_id}/account/{account_id}/load", data=data)
@@ -452,8 +576,45 @@ class EagleEyeWallet(EagleEyeApi):
     def cancel_wallet_account(self, wallet_id, account_id):
         return self.patch(f"/wallet/{wallet_id}/account/{account_id}/cancel")
 
-    def get_wallet_account_transactions(self, wallet_id, account_id):
-        return self.get(f"/wallet/{wallet_id}/account/{account_id}/transactions")
+    def get_wallet_account_transactions(
+        self,
+        wallet_id,
+        account_id,
+        event="",
+        date_created="",
+        last_updated="",
+        parent_account_transaction_id="",
+        account_transaction_id="",
+        source="",
+        value="",
+        order_by="",
+        limit=20,
+        offset=0,
+    ):
+        query = {}
+        if event != "":
+            query["event"] = ""
+        if date_created != "":
+            query["dateCreated"] = date_created
+        if last_updated != "":
+            query["lastUpdated"] = last_updated
+        if parent_account_transaction_id != "":
+            query["parentAccountTransactionId"] = parent_account_transaction_id
+        if account_transaction_id != "":
+            query["accountTransactionId"] = account_transaction_id
+        if source != "":
+            query["source"] = source
+        if value != "":
+            query["value"] = value
+        if order_by != "":
+            query["orderBy"] = order_by
+        if limit != 20:
+            query["limit"] = limit
+        if offset != 0:
+            query["offset"] = offset
+        return self.get(
+            f"/wallet/{wallet_id}/account/{account_id}/transactions", query=query
+        )
 
     def block_wallet_account(self, wallet_id, account_id):
         return self.patch(f"/wallet/{wallet_id}/account/{account_id}/block")
@@ -473,8 +634,22 @@ class EagleEyeWallet(EagleEyeApi):
     def credit_goodwill_points(self, wallet_id, account_id):
         return self.patch(f"/wallet/{wallet_id}/account/{account_id}/goodwill")
 
-    def calculate_points_to_be_earned(self, scheme_id: str):
-        return self.get(f"/scheme/{scheme_id}/earn/calculate")
+    def calculate_points_to_be_earned(
+        self,
+        scheme_id: str,
+        total_transaction_value,
+        store_id="",
+        store_parent_id="",
+        rate_name="",
+    ):
+        query = {"totalTransactionValue": total_transaction_value}
+        if store_id != "":
+            query["location[storeId]"] = store_id
+        if store_parent_id != "":
+            query["location[storeParentId"] + store_parent_id
+        if rate_name != "":
+            query["rateName"] = rate_name
+        return self.get(f"/scheme/{scheme_id}/earn/calculate", query=query)
 
     def refresh_wallet_account(self, wallet_id, account_id, data):
         return self.patch(
@@ -520,11 +695,15 @@ class EagleEyeWallet(EagleEyeApi):
             f"/account/{account_id}/move/to/wallet/{wallet_id}", data=data
         )
 
-    def get_wallet_recommendations_by_wallet_id(self, wallet_id):
-        return self.get(f"/wallet/{wallet_id}/recommendations")
+    def get_wallet_recommendations_by_wallet_id(self, wallet_id, status, channel):
+        query = {"status": status, "channel": channel}
+        return self.get(f"/wallet/{wallet_id}/recommendations", query=query)
 
-    def get_wallet_recommendations_by_identity_value(self):
-        return self.get(f"/wallet/recommendations")
+    def get_wallet_recommendations_by_identity_value(
+        self, identity_value, status, channel
+    ):
+        query = {"identity-value": identity_value, "status": status, "channel": channel}
+        return self.get(f"/wallet/recommendations", query=query)
 
     def change_recommendation_status_to_active(
         self, wallet_id, catalogue_guid, recommendation_guid

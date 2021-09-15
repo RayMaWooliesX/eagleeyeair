@@ -89,7 +89,6 @@ jobs:
           --entry-point=main_cards
           --max-instances=${{ steps.vault.outputs.max_function_instances }}
           --ingress-settings=all
-          # --egress-settings=all
           --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
           --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
           --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}

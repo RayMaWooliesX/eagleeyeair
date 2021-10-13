@@ -110,6 +110,7 @@ def _parse_request(request):
     print('Preparing data for EE request.')
 
     envelope = request.get_json()
+
     message = envelope['message']
     delivery_attempt = envelope['deliveryAttempt']
     event_data_str = base64.b64decode(message['data'])
@@ -247,7 +248,8 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
 
         changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
-        client = MongoClient(url)
+
+        client = MongoClient(url, connectTimeoutMS = 5000, serverSelectionTimeoutMS = 5000)
         db = client[dbname]
         col = db[collection]
         print(correlationId)

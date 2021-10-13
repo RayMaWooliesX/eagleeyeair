@@ -30,10 +30,8 @@ def main_cards(request):
     Args:
         request (flask.Request): The request object.
         <https://flask.palletsprojects.com/en/1.1.x/api/#incoming-request-data>
-    Returns:
-        The response text, or any set of values that can be turned into a
-        Response object using `make_response`
-        <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
+    More detail information can be found in the LLD below:
+    https://woolworthsdigital.atlassian.net/wiki/spaces/DGDMS/pages/25482592639/Detailed+Design+for+Loyalty+API+integration+of+card+management#Deregister-Card-Event
     """ 
     event_sub_types = {"cancel", "replace", "reregister", "deregister"}
     event_data, delivery_attempt = _parse_request(request)
@@ -44,20 +42,27 @@ def main_cards(request):
     if event_data["eventSubType"] not in event_sub_types:
         raise RuntimeError("Unexpected event sub type: " + event_data["eventSubType"])
 
-    wallet_id = ee.wallet.get_wallet_by_identity_value(event_data["eventDetails"]["profile"]["crn"])["walletId"]
-    identities = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id, type='LCN')["results"]
+    wallet = ee.wallet.get_wallet_by_identity_value(event_data["eventDetails"]["profile"]["crn"])
+    wallet_id = wallet["walletId"]
+    identities = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id)["results"]
 
-    identity_id = ""
+    lcn_identity_id = ""
+    crn_identity_id = ""
+    hash_crn_identity_id = ""
     for identity in identities:
         if identity["value"] == event_data["eventDetails"]["profile"]["account"]["cardNumber"]:
-            identity_id = identity["identityId"]
-    if identity_id == "":
+            lcn_identity_id = identity["identityId"]
+        if identity["type"] == "CRN":
+            crn_identity_id = identity["identityId"]
+        if identity["type"] == "HASH_CRN":
+            hash_crn_identity_id = identity["identityId"]
+    if lcn_identity_id == "":
         raise RuntimeError("LCN number: " 
                         + event_data["eventDetails"]["profile"]["account"]["cardNumber"]
                         + " can't be found in EE.")
     
     if event_data["eventSubType"] == "replace":
-        data = _prepare_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
+        data = _prepare_active_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
         ee.wallet.create_wallet_identity(wallet_id,data)
 
     if event_data["eventSubType"] in ("replace", "cancel"):
@@ -67,15 +72,46 @@ def main_cards(request):
             cancel_reason = event_data["eventDetails"]["profile"]["account"]["cards"]["cancellationReasonDescription"].upper()
         
         if cancel_reason == "LOST":
-            ee.wallet.update_wallet_identity_status_lost(wallet_id= wallet_id, identity_id= identity_id)
+            ee.wallet.update_wallet_identity_status_lost(wallet_id= wallet_id, identity_id= lcn_identity_id)
         elif cancel_reason == "STOLEN":
-            ee.wallet.update_wallet_identity_status_stolen(wallet_id= wallet_id, identity_id= identity_id)
+            ee.wallet.update_wallet_identity_status_stolen(wallet_id= wallet_id, identity_id= lcn_identity_id)
         else:
-            ee.wallet.update_wallet_identity_status_suspended(wallet_id= wallet_id, identity_id= identity_id)
+            ee.wallet.update_wallet_identity_status_suspended(wallet_id= wallet_id, identity_id= lcn_identity_id)
+
+    if event_data["eventSubType"] == "reregister":
+        if wallet["state"] != "EARNBURN":
+            ee.wallet.update_wallet_state(wallet_id= wallet_id,data = {"state": "EARNBURN"})
+        if wallet["status"] != "ACTIVE":
+            ee.wallet.activate_wallet(wallet_id = wallet_id)
+        data = _prepare_active_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
+        ee.wallet.create_wallet_identity(wallet_id,data)
+
+    if event_data["eventSubType"] == "deregister":
+        hash_lcn_payload = {
+            "type": "HASH_LCN",
+            "friendlyName": "Hashed Loyalty Card Number",
+            "value": event_data["eventDetails"]["profile"]["account"]["cards"]["deregisteredCardNumberHashed"],
+            "state": "CLOSED",
+            "status": "TERMINATED"
+            }
+        ee.wallet.create_wallet_identity(wallet_id,hash_lcn_payload)
+
+        hash_lcn_identity_id = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id, type='HASH_CRN')["results"][0]["identityId"]
+        ee.wallet.update_wallet_identity_state(wallet_id, hash_lcn_identity_id,{"state": "CLOSED"})
+        #Update HASH_CRN Identity STATUS to be TERMINATED---------
+
+        ee.wallet.update_wallet_identity_state(wallet_id, hash_crn_identity_id,{"state": "CLOSED"})
+        # Update HASH_CRN Identity STATUS to be TERMINATED
+
+        ee.wallet.delete_wallet_identity(wallet_id, crn_identity_id)
+        ee.wallet.delete_wallet_identity(wallet_id, lcn_identity_id)
+
+        ee.wallet.update_wallet_state(wallet,{"state": "CLOSED"})
+        #Update Wallet STATUS to be TERMINATED
 
     return '200'
 
-def _prepare_lcn_payload(lcn_num):
+def _prepare_active_lcn_payload(lcn_num):
     return {
             "type": "LCN",
             "friendlyName": "Loyalty Card Number",

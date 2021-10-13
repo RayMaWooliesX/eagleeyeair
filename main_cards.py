@@ -39,7 +39,6 @@ def main(request):
         url = os.environ['ee_api_url']
         authClientId = os.environ['ee_api_user']
         password = os.environ['ee_api_password']
-
         event_data = _parse_request(request)
         delivery_attempt = event_data.get('delivery_attempt')
         event_sub_type = event_data.get('event_sub_types')
@@ -49,17 +48,16 @@ def main(request):
         crn = event_data.get('crn')
         preferences = event_data.get('preferences')
         event_data_str = event_data.get('event_data_str')
-
-
+        
         preference_payload = _prepare_preference_payload(event_sub_type, preferences)
 
         logging.info("Data preparation completed.")
 
-        logging.info("Calling EE APIs to update consumer preference.")
+        print("Calling EE APIs to update consumer preference.")
         wallet_id = _get_wallet_id_by_crn(url, authClientId, password, crn, corrlation_id)
         consumer_id = _get_consumer_id_by_wallet(url, authClientId, password, wallet_id, corrlation_id)
         update_response = _update_consumer_objects_by_wallet_and_consumer_id(url, authClientId, password, wallet_id, consumer_id, preference_payload,  corrlation_id)
-        logging.info('Updating completed.')
+        print('Updating completed.')
         response_code = '200'
 
         try:
@@ -79,7 +77,7 @@ def main(request):
             error_client.report_exception()
             if delivery_attempt == 5:
                 _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-            logging.info("Too many requests error logging completed.")
+            print("Too many requests error logging completed.")
         else:
             response_code = '102'
             logging.error(RuntimeError("Http error: "))
@@ -90,7 +88,7 @@ def main(request):
             logging.error(RuntimeError(e.response.text))
             _logging_in_deadletter(event_data_str.decode('utf-8'), e.response.reason)
             _logging_in_mongodb( corrlation_id, str(e.response.status_code), e.response.reason + ": " + e.response.text , delivery_attempt)
-            logging.info("Http error logging completed.")
+            print("Http error logging completed.")
 
     except Exception as e:
         response_code = '204'
@@ -109,10 +107,9 @@ def _parse_request(request):
     '''parse the request and return event_type, event_sub_type, operation_type and 
        a map of event detail attributes
     '''
-    logging.info('Preparing data for EE request.')
+    print('Preparing data for EE request.')
 
     envelope = request.get_json()
-
     message = envelope['message']
     delivery_attempt = envelope['deliveryAttempt']
     event_data_str = base64.b64decode(message['data'])
@@ -122,12 +119,12 @@ def _parse_request(request):
     if event_type != 'preferences':
         raise Exception('Event type should be "preferences"! But got ' + event_type)
 
-    event_sub_types = {'redemption', 'communication'}
+    event_sub_types = {'redemption', 'communication', 'ereceipts'}
     event_sub_type = event_data['eventSubType']
     if event_sub_type not in event_sub_types:
         raise Exception('Unexpected sub event type! ' + event_sub_type)
     
-    operations = ['create', 'update']
+    operations = ['update']
     operation = event_data['operation']
     if operation not in operations:
         raise Exception('Incorrect operation value! ' + operation)
@@ -137,7 +134,7 @@ def _parse_request(request):
     crn = event_data['eventDetails']['profile']['crn']
     preferences = event_data['eventDetails']['profile']['account']['preferences']
 
-    logging.info('Data preparation completed.')
+    print('Data preparation completed.')
     event_data = {'delivery_attempt': delivery_attempt,
                         'event_sub_types': event_sub_type,
                         'operation': operation,
@@ -156,7 +153,7 @@ def _prepare_preference_payload(event_sub_type, preferences):
                                    }
               }
 
-    if event_sub_type == 'communications':
+    if event_sub_type == 'communication':
         for preference in preferences:
             if preference['id'] == 1042:
                 payload['data']['dimension'].append({"label": 'noLiquorOffers',
@@ -166,7 +163,10 @@ def _prepare_preference_payload(event_sub_type, preferences):
         payload['data']['dimension'].append({"label": 'redemptionSetting',
                                                 "value": preferences[0]['value']}
                                             )
-
+    elif event_sub_type == 'ereceipts':
+        payload['data']['dimension'].append({"label": 'ereceipts',
+                                                "value": preferences[0]['value']}
+                                            )
     if not payload['data']['dimension']:
         raise Exception('No expected preference found in the event data !') 
 
@@ -247,8 +247,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
 
         changes_updated = 'false' if status_code >= '300' else 'true'
         status_object = {"name": "EagleEye", "changesUpdated": changes_updated, "response": {"statusCode": status_code, "message": status_message}, "retriedCount": retried_count, "updatedAt": datetime.now().astimezone(pytz.timezone("Australia/Sydney")).strftime("%Y%m%d-%H%M%S")}
-
-        client = MongoClient(url, connectTimeoutMS = 5000, serverSelectionTimeoutMS = 5000)
+        client = MongoClient(url)
         db = client[dbname]
         col = db[collection]
         print(correlationId)
@@ -257,7 +256,7 @@ def _logging_in_mongodb(correlationId, status_code, status_message, retried_coun
         logging.info("---Logging in mongodb completed, " + str(results.modified_count) + " records logged.")
     except Exception as e:
         logging.error(RuntimeError("!!! There was an error while logging in mongodb."))
-        logging.info(traceback.format_exc())
+        print(traceback.format_exc())
         return '200'
 
 def _logging_in_deadletter(event_data, error_message):

@@ -35,6 +35,9 @@ class EagleEyeWallet(EagleEyeApi):
     def suspend_wallet(self, wallet_id):
         return self.patch(f"/wallet/{wallet_id}/suspend")
 
+    def terminate_wallet(self, wallet_id):
+        return self.patch(f"/wallet/{wallet_id}/terminate")
+
     def update_wallet_state(self, wallet_id, data):
         return self.patch(f"/wallet/{wallet_id}/state", data=data)
 
@@ -231,6 +234,9 @@ class EagleEyeWallet(EagleEyeApi):
 
     def update_wallet_identity_status_stolen(self, wallet_id, identity_id):
         return self.patch(f"/wallet/{wallet_id}/identity/{identity_id}/stolen")
+
+    def update_wallet_identity_status_terminated(self, wallet_id, identity_id):
+        return self.patch(f"/wallet/{wallet_id}/identity/{identity_id}/terminate")
 
     def update_wallet_identity_state(self, wallet_id, identity_id, data):
         return self.patch(

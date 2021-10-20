@@ -64,7 +64,10 @@ class EagleEyeApi:
         logger.debug(f"{req.method} {req.full_url}")
         try:
             resp = urllib.request.urlopen(req)
-            data = json.load(resp)
+            if resp.headers.get('content-type', '').find('application/json') >= 0:
+                data = json.load(resp)
+            else:
+                data = resp.read()
         except urllib.error.HTTPError as e:
             raise EagleEyeApiError(e)
         return data

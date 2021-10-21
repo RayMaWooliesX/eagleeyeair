@@ -46,24 +46,24 @@ def main_cards(request):
     wallet_id = wallet["walletId"]
     identities = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id)["results"]
 
-    lcn_identity_id = ""
-    crn_identity_id = ""
-    hash_crn_identity_id = ""
+    lcn = ""
+    crn = ""
+    hash_crn = ""
+    replacing_lcn = ""
     for identity in identities:
         if identity["value"] == event_data["eventDetails"]["profile"]["account"]["cardNumber"]:
-            lcn_identity_id = identity["identityId"]
+            lcn = identity
         if identity["type"] == "CRN":
-            crn_identity_id = identity["identityId"]
+            crn = identity
         if identity["type"] == "HASH_CRN":
-            hash_crn_identity_id = identity["identityId"]
-    if lcn_identity_id == "":
-        raise RuntimeError("LCN number: " 
-                        + event_data["eventDetails"]["profile"]["account"]["cardNumber"]
-                        + " can't be found in EE.")
+            hash_crn = identity
+        if event_data["eventSubType"] == "replace" and identity["value"] == event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"]:
+           replacing_lcn = identity
     
     if event_data["eventSubType"] == "replace":
-        data = _prepare_active_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
-        ee.wallet.create_wallet_identity(wallet_id,data)
+        if replacing_lcn != "":
+            data = _prepare_active_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
+            ee.wallet.create_wallet_identity(wallet_id,data)
 
     if event_data["eventSubType"] in ("replace", "cancel"):
         if event_data["eventSubType"]  == "replace":
@@ -71,43 +71,36 @@ def main_cards(request):
         else: 
             cancel_reason = event_data["eventDetails"]["profile"]["account"]["cards"]["cancellationReasonDescription"].upper()
         
-        if cancel_reason == "LOST":
-            ee.wallet.update_wallet_identity_status_lost(wallet_id= wallet_id, identity_id= lcn_identity_id)
-        elif cancel_reason == "STOLEN":
-            ee.wallet.update_wallet_identity_status_stolen(wallet_id= wallet_id, identity_id= lcn_identity_id)
+        if cancel_reason == "LOST" and lcn["status"] != "LOST":
+            ee.wallet.update_wallet_identity_status_lost(wallet_id= wallet_id, identity_id= lcn["identityId"])
+        elif cancel_reason == "STOLEN" and lcn["status"] != "STOLEN":
+            ee.wallet.update_wallet_identity_status_stolen(wallet_id= wallet_id, identity_id= lcn["identityId"])
         else:
-            ee.wallet.update_wallet_identity_status_suspended(wallet_id= wallet_id, identity_id= lcn_identity_id)
+            if lcn["status"] != "SUSPENDED":
+                ee.wallet.update_wallet_identity_status_suspended(wallet_id= wallet_id, identity_id= lcn["identityId"])
 
     if event_data["eventSubType"] == "reregister":
         if wallet["state"] != "EARNBURN":
             ee.wallet.update_wallet_state(wallet_id= wallet_id,data = {"state": "EARNBURN"})
         if wallet["status"] != "ACTIVE":
             ee.wallet.activate_wallet(wallet_id = wallet_id)
-        data = _prepare_active_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
-        ee.wallet.create_wallet_identity(wallet_id,data)
+        if lcn != "":
+            data = _prepare_active_lcn_payload(event_data["eventDetails"]["profile"]["account"]["cards"]["newCardNumber"])
+            ee.wallet.create_wallet_identity(wallet_id,data)
 
     if event_data["eventSubType"] == "deregister":
-        hash_lcn_payload = {
-            "type": "HASH_LCN",
-            "friendlyName": "Hashed Loyalty Card Number",
-            "value": event_data["eventDetails"]["profile"]["account"]["cards"]["deregisteredCardNumberHashed"],
-            "state": "CLOSED",
-            "status": "TERMINATED"
-            }
-        ee.wallet.create_wallet_identity(wallet_id,hash_lcn_payload)
-
-        hash_lcn_identity_id = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id, type='HASH_CRN')["results"][0]["identityId"]
-        ee.wallet.update_wallet_identity_state(wallet_id, hash_lcn_identity_id,{"state": "CLOSED"})
-        #Update HASH_CRN Identity STATUS to be TERMINATED---------
-
-        ee.wallet.update_wallet_identity_state(wallet_id, hash_crn_identity_id,{"state": "CLOSED"})
-        # Update HASH_CRN Identity STATUS to be TERMINATED
-
-        ee.wallet.delete_wallet_identity(wallet_id, crn_identity_id)
-        ee.wallet.delete_wallet_identity(wallet_id, lcn_identity_id)
-
-        ee.wallet.update_wallet_state(wallet,{"state": "CLOSED"})
-        #Update Wallet STATUS to be TERMINATED
+        if hash_crn["state"] != "CLOSED":
+            ee.wallet.update_wallet_identity_state(wallet_id, hash_crn["identityId"],{"state": "CLOSED"})
+        if hash_crn["status"] != "TERMINATED":
+            ee.wallet.update_wallet_identity_status_terminated(wallet_id, hash_crn["identityId"])
+        if lcn != "":
+            ee.wallet.delete_wallet_identity(wallet_id, lcn["identityId"])
+        if crn != "":
+            ee.wallet.delete_wallet_identity(wallet_id, crn["identityId"])
+        if wallet["state"] != "CLOSED":
+            ee.wallet.update_wallet_state(wallet_id,{"state": "CLOSED"})
+        if wallet["status"] != "TERMINATED":
+            ee.wallet.terminate_wallet(wallet_id)
 
     return '200'
 

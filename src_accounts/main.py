@@ -29,21 +29,30 @@ def main_accounts(request):
     
     """   
     event_data, delivery_attempt = _parse_request(request)
+    event_sub_types = ["register"]
 
-    wallet_payload = _prepare_wallet_payload(event_data)
-    wallet = ee.wallet.create_wallet_and_wallet_identities(wallet_payload)
+    if event_data["eventType"] != "accounts":
+        raise RuntimeError("Unexpected event type: " + event_data["eventType"])
 
-    ee.wallet.create_wallet_consumer(wallet["walletId"], 
-                                    {
-                                    "friendlyName": "DefaultConsumer",
-                                    "type": "DEFAULT",
-                                    }
-                                    )
+    if event_data["eventSubType"] not in event_sub_types:
+        raise RuntimeError("Unexpected event sub type: " + event_data["eventSubType"])
 
-    ee.wallet.create_wallet_scheme_account(wallet["walletId"], 
-                                           os.environ["ee_memberSchemeId"], 
-                                           {"status": "ACTIVE", "state": "LOADED"}
-                                           )   
+    # register account
+    if event_data["eventSubType"] == 'register':
+        wallet_payload = _prepare_wallet_payload(event_data)
+        wallet = ee.wallet.create_wallet_and_wallet_identities(wallet_payload)
+
+        ee.wallet.create_wallet_consumer(wallet["walletId"], 
+                                        {
+                                        "friendlyName": "DefaultConsumer",
+                                        "type": "DEFAULT",
+                                        }
+                                        )
+
+        ee.wallet.create_wallet_scheme_account(wallet["walletId"], 
+                                            os.environ["ee_memberSchemeId"], 
+                                            {"status": "ACTIVE", "state": "LOADED"}
+                                            )   
                       
     return '200'
 

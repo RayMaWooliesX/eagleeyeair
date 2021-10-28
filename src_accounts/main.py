@@ -77,8 +77,8 @@ def _prepare_wallet_payload(event_data):
                 "status": "ACTIVE"
                 },
                 {
-                "type": "HASH_LCN",
-                "friendlyName": "LCN",
+                "type": "HASH_CRN",
+                "friendlyName": "HASH_CRN",
                 "value": event_data["eventDetails"]["profile"]["crnHash"],
                 "state": "REGISTERED",
                 "status": "ACTIVE"

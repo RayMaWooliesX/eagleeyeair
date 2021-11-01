@@ -125,22 +125,3 @@ def _parse_request(request):
     logging.info('Completed preparing data for EE request.')
     return event_data, delivery_attempt
 
-
-
-    try:
-        logging.info("---Logging original message to dead letter topic.")
-        error_publisher_client = pubsub_v1.PublisherClient()
-        error_topic_path = error_publisher_client.topic_path(os.environ['GCP_PROJECT'], 
-                                                            os.environ['error_topic'])
-        user = os.environ['FUNCTION_NAME']
-        future = error_publisher_client.publish(error_topic_path, event_data.encode("utf-8"),
-                                                                        user=user,
-                                                                        error = error_message)
-        # Wait for the publish future to resolve before exiting.
-        while not future.done():
-            time.sleep(1)
-        logging.info("---Logging original message to dead letter topic completed.")
-    except Exception as e:
-        logging.error(RuntimeError("!!! There was an error while sending error message to dead letter topic. " ))
-        logging.info(traceback.format_exc())
-        pass

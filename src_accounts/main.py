@@ -64,21 +64,21 @@ def _prepare_wallet_payload(event_data):
             "identities": [
                 {
                 "type": "LCN",
-                "friendlyName": "LCN",
+                "friendlyName": "Loyalty Card Number",
                 "value": event_data["eventDetails"]["profile"]["account"]["cardNumber"],
                 "state": "REGISTERED",
                 "status": "ACTIVE"
                 },
                 {
                 "type": "CRN",
-                "friendlyName": "CRN",
+                "friendlyName": "Customer Reference Number",
                 "value": event_data["eventDetails"]["profile"]["crn"],
                 "state": "REGISTERED",
                 "status": "ACTIVE"
                 },
                 {
                 "type": "HASH_CRN",
-                "friendlyName": "HASH_CRN",
+                "friendlyName": "Hashed Customer Reference Number",
                 "value": event_data["eventDetails"]["profile"]["crnHash"],
                 "state": "REGISTERED",
                 "status": "ACTIVE"

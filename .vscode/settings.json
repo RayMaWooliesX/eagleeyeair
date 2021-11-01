@@ -3,5 +3,5 @@
     "mongodb"
 ],
 "python.pythonPath": "",
-"python.formatting.provider": "yapf"
+"python.formatting.provider": "black"
 }

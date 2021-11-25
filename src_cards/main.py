@@ -146,7 +146,7 @@ def _re_register_card(wallet, event_data, lcn):
     data = _prepare_active_lcn_payload(
         event_data["eventDetails"]["profile"]["account"]["cardNumber"]
     )
-    if lcn == "":
+    if not lcn:
         ee.wallet.create_wallet_identity(wallet["walletId"], data)
 
 

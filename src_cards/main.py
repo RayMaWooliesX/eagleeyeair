@@ -237,6 +237,8 @@ def _add_edr_registered_card_segment(wallet_id):
             },
         }
     else:
+        if not memberOfferTarget["segments"][0]["data"]:
+            memberOfferTarget["segments"][0]["data"] = {}
         memberOfferTarget["segments"][0]["data"].update({"0101": "EDR Registered card"})
     ee.wallet.update_wallet_consumer(
         wallet_id,

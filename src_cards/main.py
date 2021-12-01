@@ -218,7 +218,7 @@ def _remove_edr_registered_card_segment(wallet_id):
 def _add_edr_registered_card_segment(wallet_id):
     consumer = ee.wallet.get_wallet_consumer(wallet_id)
     memberOfferTarget = _get_memberOfferTarget_segment(consumer)
-
+    print(memberOfferTarget)
     if not memberOfferTarget:
         memberOfferTarget = {
             "friendlyName": "Sample Consumer",

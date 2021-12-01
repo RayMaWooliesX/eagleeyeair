@@ -219,7 +219,7 @@ def _add_edr_registered_card_segment(wallet_id):
     consumer = ee.wallet.get_wallet_consumer(wallet_id)
     memberOfferTarget = _get_memberOfferTarget_segment(consumer)
 
-    if memberOfferTarget == {}:
+    if not memberOfferTarget:
         memberOfferTarget = {
             "friendlyName": "Sample Consumer",
             "data": {
@@ -259,7 +259,8 @@ def _get_memberOfferTarget_segment(consumer):
             for segmentation in consumer["data"]["segmentation"]:
                 if segmentation["name"] == "memberOfferTarget":
                     memberOfferTarget = segmentation
-
+    if not memberOfferTarget:
+        memberOfferTarget = {}
     return memberOfferTarget
 
 

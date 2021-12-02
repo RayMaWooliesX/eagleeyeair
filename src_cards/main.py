@@ -146,7 +146,7 @@ def _re_register_card(wallet, event_data, lcn):
     data = _prepare_active_lcn_payload(
         event_data["eventDetails"]["profile"]["account"]["cardNumber"]
     )
-    if lcn == "":
+    if not lcn:
         ee.wallet.create_wallet_identity(wallet["walletId"], data)
 
 
@@ -219,7 +219,7 @@ def _add_edr_registered_card_segment(wallet_id):
     consumer = ee.wallet.get_wallet_consumer(wallet_id)
     memberOfferTarget = _get_memberOfferTarget_segment(consumer)
 
-    if memberOfferTarget == {}:
+    if not memberOfferTarget:
         memberOfferTarget = {
             "friendlyName": "Sample Consumer",
             "data": {
@@ -237,6 +237,8 @@ def _add_edr_registered_card_segment(wallet_id):
             },
         }
     else:
+        if not memberOfferTarget["segments"][0]["data"]:
+            memberOfferTarget["segments"][0]["data"] = {}
         memberOfferTarget["segments"][0]["data"].update({"0101": "EDR Registered card"})
     ee.wallet.update_wallet_consumer(
         wallet_id,
@@ -259,7 +261,8 @@ def _get_memberOfferTarget_segment(consumer):
             for segmentation in consumer["data"]["segmentation"]:
                 if segmentation["name"] == "memberOfferTarget":
                     memberOfferTarget = segmentation
-
+    if not memberOfferTarget:
+        memberOfferTarget = {}
     return memberOfferTarget
 
 

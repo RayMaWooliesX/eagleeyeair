@@ -10,7 +10,7 @@ from loyalty_util import mongodb_logging, parse_request, validate_payload
 client = google.cloud.logging.Client()
 client.setup_logging()
 
-EXPECTED_EVENT_TYPE = "preferences"
+EXPECTED_EVENT_TYPE = "accounts"
 EXPECTED_EVENT_SUB_TYPES = ["register", "close"]
 
 

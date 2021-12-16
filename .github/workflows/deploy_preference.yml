@@ -94,6 +94,6 @@ jobs:
           --set-env-vars EES_POS_API_HOST=${{ steps.vault.outputs.EES_POS_API_HOST }}
           --set-env-vars EES_RESOURCES_API_HOST=${{ steps.vault.outputs.EES_RESOURCES_API_HOST }}
           --set-env-vars EES_WALLET_API_HOST=${{ steps.vault.outputs.EES_WALLET_API_HOST }}
-          --set-env-vars =${{ steps.vault.outputs.MONGO_API_LOGGING_URL }}
-          --set-env-vars =${{ steps.vault.outputs.MONGO_API_LOGGING_CLIENT_ID }}
+          --set-env-vars MONGO_API_LOGGING_URL=${{ steps.vault.outputs.MONGO_API_LOGGING_URL }}
+          --set-env-vars MONGO_API_LOGGING_CLIENT_ID=${{ steps.vault.outputs.MONGO_API_LOGGING_CLIENT_ID }}
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

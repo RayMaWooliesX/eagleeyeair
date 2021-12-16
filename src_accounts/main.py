@@ -1,13 +1,17 @@
 import os
-import base64
-from datetime import datetime, timezone
 import logging
 
-
-import json
-import jsonschema
+import google.cloud.logging
 
 import eagleeyeair as ee
+from loyalty_util import mongodb_logging, parse_request, validate_payload
+
+# Instantiates a client
+client = google.cloud.logging.Client()
+client.setup_logging()
+
+EXPECTED_EVENT_TYPE = "preferences"
+EXPECTED_EVENT_SUB_TYPES = ["register", "close"]
 
 
 def main_accounts(request):
@@ -19,56 +23,78 @@ def main_accounts(request):
         More detail information can be found in the LLD below:
     https://woolworthsdigital.atlassian.net/wiki/spaces/DGDMS/pages/25556287773/Detailed+Design+for+Loyalty+API+Integration+of+account+management
     """
-    event_data, delivery_attempt = _parse_request(request)
-    event_sub_types = ["register"]
+    try:
+        event_data, delivery_attempt = parse_request(request)
+        validate_payload(event_data, EXPECTED_EVENT_TYPE, EXPECTED_EVENT_SUB_TYPES)
 
-    if event_data["eventType"] != "accounts":
-        raise RuntimeError("Unexpected event type: " + event_data["eventType"])
+        # register account
+        if event_data["eventSubType"] == "register":
+            wallet_payload = _prepare_wallet_payload(event_data)
+            wallet = ee.wallet.create_wallet_and_wallet_identities(wallet_payload)
 
-    if event_data["eventSubType"] not in event_sub_types:
-        raise RuntimeError("Unexpected event sub type: " + event_data["eventSubType"])
-
-    # register account
-    if event_data["eventSubType"] == "register":
-        wallet_payload = _prepare_wallet_payload(event_data)
-        wallet = ee.wallet.create_wallet_and_wallet_identities(wallet_payload)
-
-        consumer = ee.wallet.create_wallet_consumer(
-            wallet["walletId"],
-            {
-                "friendlyName": "DefaultConsumer",
-                "type": "DEFAULT",
-            },
-        )
-
-        ee.wallet.create_wallet_scheme_account(
-            wallet["walletId"],
-            os.environ["ee_memberSchemeId"],
-            {"status": "ACTIVE", "state": "LOADED"},
-        )
-
-        ee.wallet.update_wallet_consumer(
-            wallet["walletId"],
-            consumer["consumerId"],
-            {
-                "friendlyName": "Sample Consumer",
-                "data": {
-                    "segmentation": [
-                        {
-                            "name": "memberOfferTarget",
-                            "segments": [
-                                {
-                                    "labels": ["Member Offer Target"],
-                                    "data": {"0101": "EDR Registered card"},
-                                }
-                            ],
-                        }
-                    ]
+            consumer = ee.wallet.create_wallet_consumer(
+                wallet["walletId"],
+                {
+                    "friendlyName": "DefaultConsumer",
+                    "type": "DEFAULT",
                 },
-            },
-        )
+            )
 
-    return "200"
+            ee.wallet.create_wallet_scheme_account(
+                wallet["walletId"],
+                os.environ["ee_memberSchemeId"],
+                {"status": "ACTIVE", "state": "LOADED"},
+            )
+
+            ee.wallet.update_wallet_consumer(
+                wallet["walletId"],
+                consumer["consumerId"],
+                {
+                    "friendlyName": "Sample Consumer",
+                    "data": {
+                        "segmentation": [
+                            {
+                                "name": "memberOfferTarget",
+                                "segments": [
+                                    {
+                                        "labels": ["Member Offer Target"],
+                                        "data": {"0101": "EDR Registered card"},
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                },
+            )
+        # logging in mongodb, function return 200 even if logging fails
+        mongodb_logging(
+            event_data["operation"],
+            True,
+            200,
+            "Succeeded",
+            event_data["eventDetails"]["correlationId"],
+        )
+        return "200"
+    except ee.eagle_eye_api.EagleEyeApiError as e:
+        logging.error(e)
+        mongodb_logging(
+            event_data["operation"],
+            False,
+            e.status_code,
+            e.reason,
+            event_data["eventDetails"]["correlationId"],
+        )
+        raise e
+    except Exception as e:
+        logging.error(e)
+        mongodb_logging(
+            event_data["operation"],
+            False,
+            "NA",
+            str(e),
+            event_data["eventDetails"]["correlationId"],
+        )
+        raise e
 
 
 def _prepare_wallet_payload(event_data):
@@ -100,25 +126,3 @@ def _prepare_wallet_payload(event_data):
             },
         ],
     }
-
-
-def _parse_request(request):
-    """parse the request and return the request data in jason format"""
-    logging.info("Preparing data for EE request.")
-    envelope = request.get_json()
-    message = envelope["message"]
-    delivery_attempt = envelope["deliveryAttempt"]
-    event_data_str = base64.b64decode(message["data"])
-    event_data = json.loads(event_data_str)
-    validate_payload_format(event_data)
-
-    logging.info("Completed preparing data for EE request.")
-    return event_data, delivery_attempt
-
-
-def validate_payload_format(event_data):
-    "this function validate the message payload format againt the schema"
-    with open("account-register-schema.json", "r") as file:
-        schema = json.load(file)
-
-    jsonschema.validate(instance=event_data, schema=schema)

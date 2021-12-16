@@ -64,20 +64,19 @@ jobs:
           caCertificate: ${{ secrets.VAULT_CA }}
           secrets: |
             kv/data/${{ env.gprojectid }}/GOOGLE_CREDENTIALS GOOGLE_CREDENTIALS ;
-            kv/data/apps/wx-p24-ee-api/credentials user | EES_AUTH_CLIENT_ID ;
-            kv/data/apps/wx-p24-ee-api/credentials password | EES_AUTH_CLIENT_SECRET ;
-            kv/data/apps/wx-p24-ee-api/urls EES_API_PREFIX | EES_API_PREFIX ;
-            kv/data/apps/wx-p24-ee-api/urls EES_POS_API_HOST | EES_POS_API_HOST ;
-            kv/data/apps/wx-p24-ee-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST ;
-            kv/data/apps/wx-p24-ee-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST ;
-            kv/data/cloud-functions/${{ env.gcf_name }} trigger_topic ;
-            kv/data/cloud-functions/${{ env.gcf_name }} max_function_instances ;
-            kv/data/cloud-functions/${{ env.gcf_name }} error_topic ;
+            kv/data/apps/wx-rtl-loyalty-api/credentials user | EES_AUTH_CLIENT_ID ;
+            kv/data/apps/wx-rtl-loyalty-api/credentials password | EES_AUTH_CLIENT_SECRET ;
+            kv/data/apps/wx-rtl-loyalty-api/urls EES_API_PREFIX | EES_API_PREFIX ;
+            kv/data/apps/wx-rtl-loyalty-api/urls EES_POS_API_HOST | EES_POS_API_HOST ;
+            kv/data/apps/wx-rtl-loyalty-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST ;
+            kv/data/apps/wx-rtl-loyalty-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST ;
+            kv/data/apps/wx-rtl-loyalty-api/mongo_api_logging URL | MONGO_API_LOGGING_URL ;
+            kv/data/apps/wx-rtl-loyalty-api/mongo_api_logging CLIENT_ID | MONGO_API_LOGGING_CLIENT_ID ;
       - name: Set up gcloud Cloud SDK environment
         uses: google-github-actions/setup-gcloud@v0.2.0
         with:
           project_id: ${{ env.gprojectid }}
-          service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
+          service_account_key: ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
       - name: Deploy Function
         run: >-
           gcloud functions deploy ${{ env.gcf_name }} 
@@ -87,16 +86,15 @@ jobs:
           --trigger-http 
           --source=src_cards/
           --entry-point=main_cards
-          --max-instances=${{ steps.vault.outputs.max_function_instances }}
+          --min-instances=2
+          --max-instances=20
           --ingress-settings=all
-          --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
-          --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
-          --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}
           --set-env-vars EES_AUTH_CLIENT_ID=${{ steps.vault.outputs.EES_AUTH_CLIENT_ID }}
           --set-env-vars EES_AUTH_CLIENT_SECRET=${{ steps.vault.outputs.EES_AUTH_CLIENT_SECRET }}
           --set-env-vars EES_API_PREFIX=${{ steps.vault.outputs.EES_API_PREFIX }}
           --set-env-vars EES_POS_API_HOST=${{ steps.vault.outputs.EES_POS_API_HOST }}
           --set-env-vars EES_RESOURCES_API_HOST=${{ steps.vault.outputs.EES_RESOURCES_API_HOST }}
           --set-env-vars EES_WALLET_API_HOST=${{ steps.vault.outputs.EES_WALLET_API_HOST }}
-          --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
+          --set-env-vars =${{ steps.vault.outputs.MONGO_API_LOGGING_URL }}
+          --set-env-vars =${{ steps.vault.outputs.MONGO_API_LOGGING_CLIENT_ID }}
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

@@ -6,6 +6,7 @@ on:
       - "feature/dependencies"
     paths:
       - "src_accounts/main.py"
+      - "src_accounts/loyalty_util.py"
       - "src_accounts/requirements.txt"
       - ".github/workflows/deploy_accounts.yml"
 jobs:

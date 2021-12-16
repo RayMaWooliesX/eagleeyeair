@@ -6,6 +6,7 @@ on:
       - "feature/dependencies"
     paths:
       - "src_cards/main.py"
+      - "src_cards/loyalty_util.py"
       - "src_cards/requirements.txt"
       - ".github/workflows/deploy_cards.yml"
 jobs:

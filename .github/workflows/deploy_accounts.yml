@@ -8,6 +8,7 @@ on:
       - "src_accounts/main.py"
       - "src_accounts/loyalty_util.py"
       - "src_accounts/requirements.txt"
+      - "src_accounts/message-schema.json"
       - ".github/workflows/deploy_accounts.yml"
 jobs:
   init:

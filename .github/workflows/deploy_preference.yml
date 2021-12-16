@@ -8,6 +8,7 @@ on:
       - "src_preference/main.py"
       - "src_preference/loyalty_util.py"
       - "src_preference/requirements.txt"
+      - "src_preference/message-schema.json"
       - ".github/workflows/deploy_preference.yml"
 jobs:
   init:

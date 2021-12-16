@@ -66,7 +66,6 @@ def parse_request(request):
     delivery_attempt = envelope["deliveryAttempt"]
     event_data_str = base64.b64decode(message["data"])
     event_data = json.loads(event_data_str)
-    validate_payload(event_data)
 
     logging.info("Parsed event data for EE request.")
     return event_data, delivery_attempt

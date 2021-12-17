@@ -33,7 +33,8 @@ def mongodb_logging(operation, changesUpdated, responseCode, message, correlatio
         )
         if r.status_code >= 400:
             logging.error("Mongo logging competed with  " + r.text)
-        logging.info("Mongo logging competed with  " + r.text)
+        else:
+            logging.info("Mongo logging competed with  " + r.text)
 
         r.raise_for_status
         return r.status_code

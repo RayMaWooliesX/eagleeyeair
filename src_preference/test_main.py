@@ -6,7 +6,11 @@ os.environ["EES_API_PREFIX"] = "/2.0"
 os.environ["EES_POS_API_HOST"] = "pos.sandbox.uk.eagleeye.com"
 os.environ["EES_RESOURCES_API_HOST"] = "resources.sandbox.uk.eagleeye.com"
 os.environ["EES_WALLET_API_HOST"] = "wallet.sandbox.uk.eagleeye.com"
+os.environ[
+    "MONGO_API_LOGGING_URL"
+] = "https://apigee-test.api-wr.com/wx/v2/member/preferences/mongo"
 
+os.environ["MONGO_API_LOGGING_CLIENT_ID"] = "hrANvT98mnUo2fPXIZlAXEEO9u9VNihA"
 import unittest
 from unittest import mock
 from requests.api import patch
@@ -41,7 +45,7 @@ import eagleeyeair
                     "crn": "999142021141236899440",
                     "crnHash": "b73bb1dde9bc512ad8e852e4b9c7789bba986fd64824637a49c6cd06e5aa3d03",
                     "account": {
-                        "accountType": {"code": 1002, "name": "EDR"},
+                        "accountType": {"code": 1002, "name": "EDR Card"},
                         "cardNumber": "888142021141236899440",
                         "preferences": [
                             {

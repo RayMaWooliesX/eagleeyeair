@@ -31,6 +31,8 @@ def mongodb_logging(operation, changesUpdated, responseCode, message, correlatio
         r = requests.put(
             MONGO_API_LOGGING_URL, json.dumps(data), headers=MONGO_API_LOGGING_HEADERS
         )
+        logging.info("Mongo logging competed with  " + r.text)
+
         r.raise_for_status
         return r.status_code
     except Exception as e:

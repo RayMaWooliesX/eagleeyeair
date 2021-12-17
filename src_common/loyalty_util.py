@@ -1,3 +1,4 @@
+import os
 import logging
 from datetime import datetime
 import base64
@@ -6,9 +7,9 @@ import jsonschema
 import json
 import requests
 
-MONGO_API_LOGGING_URL = "https://apigee-test.api-wr.com/wx/v2/member/preferences/mongo"
+MONGO_API_LOGGING_URL = os.environ["MONGO_API_LOGGING_URL"]
 SYS_NAME = "RTL"
-MONGO_API_LOGGING_CLIENT_ID = "hrANvT98mnUo2fPXIZlAXEEO9u9VNihA"
+MONGO_API_LOGGING_CLIENT_ID = os.environ["MONGO_API_LOGGING_CLIENT_ID"]
 MONGO_API_LOGGING_HEADERS = {
     "Content-Type": "application/json",
     "client_id": MONGO_API_LOGGING_CLIENT_ID,
@@ -30,6 +31,7 @@ def mongodb_logging(operation, changesUpdated, responseCode, message, correlatio
         r = requests.put(
             MONGO_API_LOGGING_URL, json.dumps(data), headers=MONGO_API_LOGGING_HEADERS
         )
+        r.raise_for_status
         return r.status_code
     except Exception as e:
         logging.error(e)

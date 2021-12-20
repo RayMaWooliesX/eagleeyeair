@@ -60,7 +60,6 @@ class EagleEyeApi:
         req.add_header("Content-Type", "application/json")
         logger.debug(url)
         logger.debug(urllib.parse.urlsplit(url))
-        logger.info(req.headers)
         logger.debug(f"{req.method} {req.full_url}")
         try:
             resp = urllib.request.urlopen(req)

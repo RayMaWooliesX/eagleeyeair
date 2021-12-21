@@ -66,15 +66,14 @@ jobs:
           caCertificate: ${{ secrets.VAULT_CA }}
           secrets: |
             kv/data/${{ env.gprojectid }}/GOOGLE_CREDENTIALS GOOGLE_CREDENTIALS ;
-            kv/data/apps/wx-rtl-loyalty-api/credentials user | EES_AUTH_CLIENT_ID ;
-            kv/data/apps/wx-rtl-loyalty-api/credentials password | EES_AUTH_CLIENT_SECRET ;
-            kv/data/apps/wx-rtl-loyalty-api/urls EES_API_PREFIX | EES_API_PREFIX ;
-            kv/data/apps/wx-rtl-loyalty-api/urls EES_POS_API_HOST | EES_POS_API_HOST ;
-            kv/data/apps/wx-rtl-loyalty-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST ;
-            kv/data/apps/wx-rtl-loyalty-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST ;
-            kv/data/apps/wx-rtl-loyalty-api/others ee_memberSchemeId | ee_memberSchemeId ;
-            kv/data/apps/wx-rtl-loyalty-api/mongo_api_logging URL | MONGO_API_LOGGING_URL ;
-            kv/data/apps/wx-rtl-loyalty-api/mongo_api_logging CLIENT_ID | MONGO_API_LOGGING_CLIENT_ID ;
+            kv/data/apps/wx-p24-ee-api/credentials user | EES_AUTH_CLIENT_ID ;
+            kv/data/apps/wx-p24-ee-api/credentials password | EES_AUTH_CLIENT_SECRET ;
+            kv/data/apps/wx-p24-ee-api/urls EES_API_PREFIX | EES_API_PREFIX ;
+            kv/data/apps/wx-p24-ee-api/urls EES_POS_API_HOST | EES_POS_API_HOST ;
+            kv/data/apps/wx-p24-ee-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST ;
+            kv/data/apps/wx-p24-ee-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST ;
+            kv/data/apps/wx-p24-ee-api/mongo_api_logging URL | MONGO_API_LOGGING_URL ;
+            kv/data/apps/wx-p24-ee-api/mongo_api_logging CLIENT_ID | MONGO_API_LOGGING_CLIENT_ID ;
       - name: Set up gcloud Cloud SDK environment
         uses: google-github-actions/setup-gcloud@v0.2.0
         with:

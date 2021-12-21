@@ -4,14 +4,19 @@ This Cloud function is responsible for:
 - Preparing data for the EE API calls.
 - Calling EE APIs to update preference
 """
-
-
-import base64
 import logging
-import json
-import jsonschema
+
+import google.cloud.logging
 
 import eagleeyeair as ee
+from loyalty_util import mongodb_logging, parse_request, validate_payload
+
+# Instantiates a client
+client = google.cloud.logging.Client()
+client.setup_logging()
+
+EXPECTED_EVENT_TYPE = "cards"
+EXPECTED_EVENT_SUB_TYPES = {"cancel", "replace", "reregister", "deregister"}
 
 
 def main_cards(request):
@@ -23,179 +28,162 @@ def main_cards(request):
     More detail information can be found in the LLD below:
     https://woolworthsdigital.atlassian.net/wiki/spaces/DGDMS/pages/25482592639/Detailed+Design+for+Loyalty+API+integration+of+card+management#Deregister-Card-Event
     """
-
-    event_data, delivery_attempt = _parse_request(request)
-
-    ##validate the event type and event sub type value
-    event_sub_types = {"cancel", "replace", "reregister", "deregister"}
-    if event_data["eventType"] != "cards":
-        raise RuntimeError("Unexpected event type: " + event_data["eventType"])
-    if event_data["eventSubType"] not in event_sub_types:
-        raise RuntimeError("Unexpected event sub type: " + event_data["eventSubType"])
-
-    wallet = ee.wallet.get_wallet_by_identity_value(
-        event_data["eventDetails"]["profile"]["crnHash"]
-    )
-    wallet_id = wallet["walletId"]
-    identities = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id)["results"]
-
-    lcn = {}
-    crn = {}
-    hash_crn = {}
-    replacing_lcn = {}
-    identity_values = []
-
-    for identity in identities:
-        identity_values.append(identity["value"])
-        if (
-            identity["value"]
-            == event_data["eventDetails"]["profile"]["account"]["cardNumber"]
-        ):
-            lcn = identity
-        if identity["type"] == "CRN":
-            crn = identity
-        if identity["type"] == "HASH_CRN":
-            hash_crn = identity
+    try:
+        event_data, delivery_attempt = parse_request(request)
+        validate_payload(event_data, EXPECTED_EVENT_TYPE, EXPECTED_EVENT_SUB_TYPES)
+        logging.info("Starting the " + event_data["eventSubType"] + " card process.")
         if event_data["eventSubType"] == "replace":
-            if (
-                identity["value"]
-                == event_data["eventDetails"]["profile"]["account"]["cards"][
-                    "newCardNumber"
-                ]
-            ):
-                replacing_lcn = identity
-            if (
-                identity["value"]
-                == event_data["eventDetails"]["profile"]["account"]["cards"][
+            wallet = ee.wallet.get_wallet_by_identity_value(
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
                     "oldCardNumber"
                 ]
-            ):
-                lcn = identity
-
-    if event_data["eventSubType"] == "replace":
-        if replacing_lcn == {}:
-            data = _prepare_active_lcn_payload(
-                event_data["eventDetails"]["profile"]["account"]["cards"][
+            )
+            new_card_payload = _prepare_active_lcn_payload(
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
                     "newCardNumber"
                 ]
             )
             # create the new card
-            ee.wallet.create_wallet_identity(wallet_id, data)
-        # cancel the existing card
-        _cancel_card(
-            wallet_id,
-            lcn,
-            event_data["eventDetails"]["profile"]["account"]["cards"][
-                "replacementReason"
-            ].upper(),
+            ee.wallet.create_wallet_identity(wallet["walletId"], new_card_payload)
+            # cancel the existing card
+            _cancel_card(
+                wallet["walletId"],
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "oldCardNumber"
+                ],
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "replacementReason"
+                ].upper(),
+            )
+
+        if event_data["eventSubType"] == "cancel":
+            wallet = ee.wallet.get_wallet_by_identity_value(
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "cancelledCardNumber"
+                ]
+            )
+            # cancel the card
+            _cancel_card(
+                wallet["walletId"],
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "cancelledCardNumber"
+                ],
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "cancellationReasonDescription"
+                ].upper(),
+            )
+            _remove_edr_registered_card_segment(wallet["walletId"])
+
+        if event_data["eventSubType"] == "reregister":
+            wallet = ee.wallet.get_wallet_by_identity_value(
+                event_data["eventDetails"]["profile"]["crnHash"]
+            )
+            _re_register_card(
+                wallet,
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "newCardNumber"
+                ],
+            )
+            _add_edr_registered_card_segment(wallet["walletId"])
+
+        if event_data["eventSubType"] == "deregister":
+            wallet = ee.wallet.get_wallet_by_identity_value(
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "deregisteredCardNumber"
+                ]
+            )
+
+            _deregister_card(
+                wallet["walletId"],
+                event_data["eventDetails"]["profile"]["crn"],
+                event_data["eventDetails"]["profile"]["crnHash"],
+                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
+                    "deregisteredCardNumber"
+                ],
+            )
+        logging.info("Completed the " + event_data["eventSubType"] + " card process.")
+        # logging in mongodb, function return 200 even if logging fails
+        mongodb_logging(
+            event_data["operation"],
+            True,
+            200,
+            "Succeeded",
+            event_data["eventDetails"]["correlationId"],
         )
-
-    if event_data["eventSubType"] == "cancel":
-        # cancel the card
-        _cancel_card(
-            wallet_id,
-            lcn,
-            event_data["eventDetails"]["profile"]["account"]["cards"][
-                "cancellationReasonDescription"
-            ].upper(),
+        return "200"
+    except ee.eagle_eye_api.EagleEyeApiError as e:
+        logging.error(e)
+        mongodb_logging(
+            event_data["operation"],
+            False,
+            e.status_code,
+            e.reason,
+            event_data["eventDetails"]["correlationId"],
         )
-        _remove_edr_registered_card_segment(wallet_id)
-
-    if event_data["eventSubType"] == "reregister":
-        _re_register_card(wallet, event_data, lcn)
-        _add_edr_registered_card_segment(wallet_id)
-
-    if event_data["eventSubType"] == "deregister":
-        _deregister_card(wallet, crn, hash_crn, lcn)
-
-    return "200"
-
-
-def _parse_request(request):
-    """parse the request and return the request data in jason format"""
-    envelope = request.get_json()
-    message = envelope["message"]
-    delivery_attempt = envelope["deliveryAttempt"]
-    event_data_str = base64.b64decode(message["data"])
-    event_data = json.loads(event_data_str)
-
-    ##validate the payload against the scheme definition
-    _validate_payload_format(event_data)
-
-    logging.info("Completed preparing data for EE request.")
-    return event_data, delivery_attempt
+        raise e
+    except Exception as e:
+        logging.error(e)
+        mongodb_logging(
+            event_data["operation"],
+            False,
+            "NA",
+            str(e),
+            event_data["eventDetails"]["correlationId"],
+        )
+        raise e
 
 
-def _validate_payload_format(event_data):
-    "this function validate the message payload format againt the schema"
-    with open("message-schema.json", "r") as file:
-        schema = json.load(file)
+def _cancel_card(wallet_id, lcn, cancel_reason):
+    identities = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id)["results"]
+    lcn_identity_id = _get_wallet_identity_id(identities, lcn, "LCN")
+    if cancel_reason == "LOST":
+        ee.wallet.update_wallet_identity_status_lost(wallet_id, lcn_identity_id)
+    elif cancel_reason == "STOLEN":
+        ee.wallet.update_wallet_identity_status_stolen(wallet_id, lcn_identity_id)
+    else:
+        ee.wallet.update_wallet_identity_status_suspended(wallet_id, lcn_identity_id)
 
-    jsonschema.validate(instance=event_data, schema=schema)
 
-
-def _re_register_card(wallet, event_data, lcn):
-    # update the wallet state, status value and create card if not exist
+def _re_register_card(wallet, lcn):
+    # update the wallet state, status value and create card
     if wallet["state"] != "EARNBURN":
         ee.wallet.update_wallet_state(
             wallet_id=wallet["walletId"], data={"state": "EARNBURN"}
         )
     if wallet["status"] != "ACTIVE":
-        ee.wallet.activate_wallet(wallet_id=wallet["walletId"])
+        ee.wallet.activate_wallet(wallet["walletId"])
 
-    data = _prepare_active_lcn_payload(
-        event_data["eventDetails"]["profile"]["account"]["cardNumber"]
+    data = _prepare_active_lcn_payload(lcn)
+    ee.wallet.create_wallet_identity(wallet["walletId"], data)
+
+
+def _deregister_card(wallet_id, crn, hash_crn, lcn):
+    identities = ee.wallet.get_wallet_identities_by_wallet_id(wallet_id)["results"]
+    crn_identity_id = _get_wallet_identity_id(identities, crn, "CRN")
+    hash_crn_identity_id = _get_wallet_identity_id(identities, hash_crn, "HASH_CRN")
+    lcn_identity_id = _get_wallet_identity_id(identities, lcn, "LCN")
+
+    ee.wallet.update_wallet_identity_state(
+        wallet_id, hash_crn_identity_id, {"state": "CLOSED"}
     )
-    if not lcn:
-        ee.wallet.create_wallet_identity(wallet["walletId"], data)
+    ee.wallet.update_wallet_identity_status_terminated(wallet_id, hash_crn_identity_id)
+    ee.wallet.delete_wallet_identity(wallet_id, crn_identity_id)
+    ee.wallet.delete_wallet_identity(wallet_id, lcn_identity_id)
+
+    _remove_all_dimension_segment_values(wallet_id)
+
+    ee.wallet.update_wallet_state(wallet_id, {"state": "CLOSED"})
+    ee.wallet.terminate_wallet(wallet_id)
 
 
-def _prepare_active_lcn_payload(lcn_num):
+def _prepare_active_lcn_payload(lcn):
     return {
         "type": "LCN",
         "friendlyName": "Loyalty Card Number",
-        "value": lcn_num,
+        "value": lcn,
         "state": "REGISTERED",
         "status": "ACTIVE",
     }
-
-
-def _deregister_card(wallet, crn, hash_crn, lcn):
-    if hash_crn["state"] != "CLOSED":
-        ee.wallet.update_wallet_identity_state(
-            wallet["walletId"], hash_crn["identityId"], {"state": "CLOSED"}
-        )
-    if hash_crn["status"] != "TERMINATED":
-        ee.wallet.update_wallet_identity_status_terminated(
-            wallet["walletId"], hash_crn["identityId"]
-        )
-    if lcn:
-        ee.wallet.delete_wallet_identity(wallet["walletId"], lcn["identityId"])
-    if crn:
-        ee.wallet.delete_wallet_identity(wallet["walletId"], crn["identityId"])
-
-    _remove_all_dimension_segment_values(wallet["walletId"])
-
-    if wallet["state"] != "CLOSED":
-        ee.wallet.update_wallet_state(wallet["walletId"], {"state": "CLOSED"})
-    if wallet["status"] != "TERMINATED":
-        ee.wallet.terminate_wallet(wallet["walletId"])
-
-
-def _cancel_card(wallet_id, lcn, cancel_reason):
-    if cancel_reason == "LOST" and lcn["status"] != "LOST":
-        ee.wallet.update_wallet_identity_status_lost(
-            wallet_id=wallet_id, identity_id=lcn["identityId"]
-        )
-    elif cancel_reason == "STOLEN" and lcn["status"] != "STOLEN":
-        ee.wallet.update_wallet_identity_status_stolen(
-            wallet_id=wallet_id, identity_id=lcn["identityId"]
-        )
-    else:
-        if lcn["status"] != "SUSPENDED":
-            ee.wallet.update_wallet_identity_status_suspended(
-                wallet_id=wallet_id, identity_id=lcn["identityId"]
-            )
 
 
 def _remove_edr_registered_card_segment(wallet_id):
@@ -221,21 +209,15 @@ def _add_edr_registered_card_segment(wallet_id):
 
     if not memberOfferTarget:
         memberOfferTarget = {
-            "friendlyName": "Sample Consumer",
-            "data": {
-                "segmentation": [
-                    {
-                        "name": "memberOfferTarget",
-                        "segments": [
-                            {
-                                "labels": ["Member Offer Target"],
-                                "data": {"0101": "EDR Registered card"},
-                            }
-                        ],
-                    }
-                ]
-            },
+            "name": "memberOfferTarget",
+            "segments": [
+                {
+                    "labels": ["Member Offer Target"],
+                    "data": {"0101": "EDR Registered card"},
+                }
+            ],
         }
+
     else:
         if not memberOfferTarget["segments"][0]["data"]:
             memberOfferTarget["segments"][0]["data"] = {}
@@ -244,14 +226,13 @@ def _add_edr_registered_card_segment(wallet_id):
         wallet_id,
         consumer["consumerId"],
         {
-            "friendlyName": "Sample Consumer",
             "data": {"segmentation": [memberOfferTarget]},
         },
     )
 
 
 def _get_memberOfferTarget_segment(consumer):
-
+    """get the memberOfferTarget segment from EE, return {} if not exist"""
     memberOfferTarget = {}
 
     if not consumer["data"]:
@@ -276,8 +257,8 @@ def _remove_all_dimension_segment_values(wallet_id):
     else:
         if consumer["data"].get("segmentation"):
             for segmentation in consumer["data"].get("segmentation"):
-                segmentation["segments"][0].update({"data": {}})
-                seg_without_value.append(segmentation)
+                segmentation.update({"segments": []})
+            seg_without_value.append(segmentation)
         if consumer["data"].get("dimension"):
             for dim in consumer["data"].get("dimension"):
                 dim.update({"value": None})
@@ -287,13 +268,25 @@ def _remove_all_dimension_segment_values(wallet_id):
         consumer_data.update({"dimension": dim_without_value})
     if seg_without_value:
         consumer_data.update({"segmentation": seg_without_value})
-
+    print(seg_without_value)
     if consumer_data:
         ee.wallet.update_wallet_consumer(
             wallet_id,
             consumer["consumerId"],
             {
-                "friendlyName": "Sample Consumer",
                 "data": consumer_data,
             },
         )
+
+
+def _get_wallet_identity_id(identities, identity_value, identity_type):
+
+    for identity in identities:
+        if identity["value"] == identity_value and identity["type"] == identity_type:
+            identity_id = identity["identityId"]
+    if not identity_id:
+        raise RuntimeError(
+            identity_type + "N: " + identity_value + " can not be found in the wallet!"
+        )
+
+    return identity_id

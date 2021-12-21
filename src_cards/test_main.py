@@ -7,29 +7,18 @@ os.environ["EES_POS_API_HOST"] = "pos.sandbox.uk.eagleeye.com"
 os.environ["EES_RESOURCES_API_HOST"] = "resources.sandbox.uk.eagleeye.com"
 os.environ["EES_WALLET_API_HOST"] = "wallet.sandbox.uk.eagleeye.com"
 
-import unittest
 from unittest import mock
-from requests.api import patch
-from requests.models import Response
-import main
-import base64
-import hashlib
-import time
-from pymongo import MongoClient
-from pymongo.collection import Collection
-from flask import Flask
-import requests
-import logging
 from datetime import datetime
 
 import eagleeyeair
+import main
 
 try:
     # set up data for cancel
-    eagleeyeair.wallet.update_wallet_identity_status_active("114413159", "87930461")
+    eagleeyeair.wallet.update_wallet_identity_status_active("115103065", "88581976")
     eagleeyeair.wallet.update_wallet_consumer(
-        "114413159",
-        "18088672",
+        "115103065",
+        "18092294",
         {
             "friendlyName": "Sample Consumer",
             "data": {
@@ -93,20 +82,20 @@ try:
         },
     )
     # set up data for replace
-    eagleeyeair.wallet.update_wallet_identity_status_active("114305351", "87863093")
+    eagleeyeair.wallet.update_wallet_identity_status_active("115205616", "88682691")
 
     # set the wallet and identity status/state for reregister
     eagleeyeair.wallet.update_wallet_state(
-        wallet_id="114801331", data={"state": "CLOSED"}
+        wallet_id="115205634", data={"state": "CLOSED"}
     )
-    eagleeyeair.wallet.suspend_wallet("114801331")
+    eagleeyeair.wallet.suspend_wallet("115205634")
 
 except Exception as e:
     print(e)
 
 
 @mock.patch(
-    "main._parse_request",
+    "main.parse_request",
     return_value=(
         {
             "eventType": "cards",
@@ -118,13 +107,13 @@ except Exception as e:
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {
-                    "crn": "622589b75ea8cb24c3d3b505379b26fe",
-                    "crnHash": "94b43035b41b54fea20c7e8bea4e5c43cc3a6fc9137a41c1d330f1e481c5c7d5",
+                    "crn": "999152021161217433918",
+                    "crnHash": "dd5d9273336cecfe867653f4e720c5642363128b4c176ed31cb3a64c922184a0",
                     "account": {
-                        "accountType": {"code": 1002, "name": "EDR"},
-                        "cardNumber": "d309d83e9f408633597ec19da315880c",
-                        "cards": {
-                            "cancelledCardNumber": "d309d83e9f408633597ec19da315880c",
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888152021161217433918",
+                        "cardEventDetail": {
+                            "cancelledCardNumber": "888152021161217433918",
                             "cancellationReasonCode": "123",
                             "cancellationReasonDescription": "LOST",
                             "cancellationComment": "Not getting many offers",
@@ -149,7 +138,7 @@ def test_main_cards_cancel(mock_parse_request):
 
 
 @mock.patch(
-    "main._parse_request",
+    "main.parse_request",
     return_value=(
         {
             "eventType": "cards",
@@ -161,14 +150,14 @@ def test_main_cards_cancel(mock_parse_request):
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {
-                    "crn": "9942cc5d2bfee0e540d5801a483aa882",
-                    "crnHash": "3d05e22d0c398e642a3b5ffe815461306b99c901ee57682a52b0827c3c270e08",
+                    "crn": "999162021091248967073",
+                    "crnHash": "0c0d312b60dd309af44c11a74bb43d9f1d6c8916e971e00e2f67c233acb4ec8e",
                     "account": {
-                        "accountType": {"code": 1002, "name": "EDR"},
-                        "cardNumber": "a90ce8514780380e5cd752ae6151d620",
-                        "cards": {
-                            "oldCardNumber": "a90ce8514780380e5cd752ae6151d620",
-                            "newCardNumber": "a90ce8514780380e5cd752ae6151d620new"
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888162021091248967073",
+                        "cardEventDetail": {
+                            "oldCardNumber": "888162021091248967073",
+                            "newCardNumber": "888162021091248967073new"
                             + datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)"),
                             "replacementReason": "Lost",
                         },
@@ -197,7 +186,7 @@ def test_main_cards_replace(mock_parse_request):
 
 
 @mock.patch(
-    "main._parse_request",
+    "main.parse_request",
     return_value=(
         {
             "eventType": "cards",
@@ -209,13 +198,13 @@ def test_main_cards_replace(mock_parse_request):
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {
-                    "crn": "c78a09b2d48445e0bc7a233257984fdb",
-                    "crnHash": "53e23eb30f9f9d55da90d3836fde4599acff88860cc2c97819bc5e5bf350089f",
+                    "crn": "999162021091245926065",
+                    "crnHash": "b3fda621058bfdae3322d8110fbfca1966294dc94b7fc001339986c7670bae4a",
                     "account": {
-                        "accountType": {"code": 1002, "name": "EDR"},
-                        "cardNumber": "476161f03910f2bc459c9d98c8508d4c",
-                        "cards": {
-                            "newCardNumber": "476161f03910f2bc459c9d98c8508d4c-reregister"
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888162021091245926065",
+                        "cardEventDetail": {
+                            "newCardNumber": "888162021091245926065-reregister"
                             + datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
                         },
                     },
@@ -237,7 +226,7 @@ def test_main_cards_reregister(mock_parse_request):
 
 
 @mock.patch(
-    "main._parse_request",
+    "main.parse_request",
     return_value=(
         {
             "eventType": "cards",
@@ -249,13 +238,13 @@ def test_main_cards_reregister(mock_parse_request):
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {
-                    "crn": "b9c82ef7bf55b08a609ed89f6b20bb4f",
-                    "crnHash": "1d40285eb9758aad6d18a449d6602af710c428b753f5f3c3ce38adad284b4f99",
+                    "crn": "999162021111200990217",
+                    "crnHash": "fc1304e481f4f49aaa74aecf9eb7473a694e118c4c53a3a36098547947bcc31a",
                     "account": {
-                        "accountType": {"code": 1002, "name": "EDR"},
-                        "cardNumber": "5d7e27763c60c85cc4acfc8644d1257d",
-                        "cards": {
-                            "deregisteredCardNumber": "5d7e27763c60c85cc4acfc8644d1257d"
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888162021111200990217",
+                        "cardEventDetail": {
+                            "deregisteredCardNumber": "888162021111200990217"
                         },
                     },
                 },

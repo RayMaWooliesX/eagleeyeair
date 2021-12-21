@@ -8,4 +8,4 @@ pymongo[srv]
 flask
 pytz
 jsonschema
-eagleeyeair
+eagleeyeair==0.1.7

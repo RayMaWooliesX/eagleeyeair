@@ -7,5 +7,5 @@ google-cloud-error-reporting
 pymongo[srv]
 flask
 pytz
-eagleeyeair
 jsonschema
+eagleeyeair==0.1.7

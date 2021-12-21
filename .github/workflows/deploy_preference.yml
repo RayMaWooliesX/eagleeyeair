@@ -6,7 +6,9 @@ on:
       - "feature/dependencies"
     paths:
       - "src_preference/main.py"
+      - "src_preference/loyalty_util.py"
       - "src_preference/requirements.txt"
+      - "src_preference/message-schema.json"
       - ".github/workflows/deploy_preference.yml"
 jobs:
   init:
@@ -70,20 +72,13 @@ jobs:
             kv/data/apps/wx-p24-ee-api/urls EES_POS_API_HOST | EES_POS_API_HOST ;
             kv/data/apps/wx-p24-ee-api/urls EES_RESOURCES_API_HOST | EES_RESOURCES_API_HOST ;
             kv/data/apps/wx-p24-ee-api/urls EES_WALLET_API_HOST | EES_WALLET_API_HOST ;
-            kv/data/cloud-functions/${{ env.gcf_name }} trigger_topic ;
-            kv/data/cloud-functions/${{ env.gcf_name }} max_function_instances ;
-            kv/data/cloud-functions/${{ env.gcf_name }} ee_api_url ;
-            kv/data/apps/wx-p24-ee-api/credentials user | ee_api_user ;
-            kv/data/apps/wx-p24-ee-api/credentials password | ee_api_password ;
-            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp url | mongodb_url ;
-            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp dbname | mongodb_dbname ;
-            kv/data/mongodbatlas/wx-p24-loyalty-api-cfp collection_cfp_change_status | mongodb_collection ;
-            kv/data/cloud-functions/${{ env.gcf_name }} error_topic ;
+            kv/data/apps/wx-p24-ee-api/mongo_api_logging URL | MONGO_API_LOGGING_URL ;
+            kv/data/apps/wx-p24-ee-api/mongo_api_logging CLIENT_ID | MONGO_API_LOGGING_CLIENT_ID ;
       - name: Set up gcloud Cloud SDK environment
         uses: google-github-actions/setup-gcloud@v0.2.0
         with:
           project_id: ${{ env.gprojectid }}
-          service_account_key : ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
+          service_account_key: ${{ steps.vault.outputs.GOOGLE_CREDENTIALS }}
       - name: Deploy Function ${{ env.gcf_name }}
         run: >-
           gcloud functions deploy ${{ env.gcf_name }} 
@@ -92,22 +87,15 @@ jobs:
           --runtime=python38
           --trigger-http 
           --source=src_preference/
-          --entry-point=main_preference 
-          --max-instances=${{ steps.vault.outputs.max_function_instances }}
-          --ingress-settings=all
-          --vpc-connector=wx-p24-loyalty-api-pref
-          --egress-settings=all
-          --set-env-vars VAULT_ADDR=${{ env.VAULT_ADDR }}
-          --set-env-vars GCP_PROJECT=${{ env.gprojectid }}
-          --set-env-vars FUNCTION_NAME=${{ env.gcf_name }}
+          --entry-point=main_preference
+          --min-instances=2
+          --max-instances=20
           --set-env-vars EES_AUTH_CLIENT_ID=${{ steps.vault.outputs.EES_AUTH_CLIENT_ID }}
           --set-env-vars EES_AUTH_CLIENT_SECRET=${{ steps.vault.outputs.EES_AUTH_CLIENT_SECRET }}
           --set-env-vars EES_API_PREFIX=${{ steps.vault.outputs.EES_API_PREFIX }}
           --set-env-vars EES_POS_API_HOST=${{ steps.vault.outputs.EES_POS_API_HOST }}
           --set-env-vars EES_RESOURCES_API_HOST=${{ steps.vault.outputs.EES_RESOURCES_API_HOST }}
           --set-env-vars EES_WALLET_API_HOST=${{ steps.vault.outputs.EES_WALLET_API_HOST }}
-          --set-env-vars error_topic=${{ steps.vault.outputs.error_topic }}
-          --set-env-vars mongodb_url=${{ steps.vault.outputs.mongodb_url }}
-          --set-env-vars mongodb_dbname=${{ steps.vault.outputs.mongodb_dbname }}
-          --set-env-vars mongodb_collection=${{ steps.vault.outputs.mongodb_collection }}
+          --set-env-vars MONGO_API_LOGGING_URL=${{ steps.vault.outputs.MONGO_API_LOGGING_URL }}
+          --set-env-vars MONGO_API_LOGGING_CLIENT_ID=${{ steps.vault.outputs.MONGO_API_LOGGING_CLIENT_ID }}
           --service-account=p24worker@${{ env.gprojectid }}.iam.gserviceaccount.com

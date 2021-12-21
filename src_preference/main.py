@@ -1,26 +1,24 @@
-'''
+"""
 This Cloud function is responsible for:
 - Parsing data triggered by source pubsub
 - Preparing data for the EE API calls.
 - Calling EE APIs to update preference
-'''
+"""
 
-import os
-import base64
-import hashlib
-import time
-from datetime import datetime, timezone
-
-import pytz
-import json
+import datetime
 import logging
-import traceback
-import requests
-from google.cloud import pubsub_v1
-from google.cloud import error_reporting
-import jsonschema
+
+import google.cloud.logging
 
 import eagleeyeair as ee
+from loyalty_util import mongodb_logging, parse_request, validate_payload
+
+# Instantiates a logging client
+client = google.cloud.logging.Client()
+client.setup_logging()
+
+EXPECTED_EVENT_TYPE = "preferences"
+
 
 def main_preference(request):
     """Background Cloud Function to be triggered by Pub/Sub.
@@ -32,115 +30,147 @@ def main_preference(request):
         metadata. The `event_id` field contains the Pub/Sub message ID. The
         `timestamp` field contains the publish time.
     """
-    event_data, delivery_attempt = _parse_request(request)
-    wallet = ee.wallet.get_wallet_by_identity_value(event_data["eventDetails"]["profile"]["crn"])
-    consumer = ee.wallet.get_wallet_consumer(wallet["walletId"])
-    preference_payload = _prepare_consumer_payload(event_data, consumer)
+    try:
+        event_data, delivery_attempt = parse_request(request)
+        validate_payload(event_data, EXPECTED_EVENT_TYPE)
+        logging.info("Starting the card preference updating process.")
+        wallet = ee.wallet.get_wallet_by_identity_value(
+            event_data["eventDetails"]["profile"]["crnHash"]
+        )
+        consumer = ee.wallet.get_wallet_consumer(wallet["walletId"])
+        preference_payload = _prepare_consumer_payload(event_data, consumer)
 
-    ee.wallet.update_wallet_consumer(wallet["walletId"], consumer["consumerId"], preference_payload)
+        ee.wallet.update_wallet_consumer(
+            wallet["walletId"], consumer["consumerId"], preference_payload
+        )
+        logging.info("Completed the card preference updating process.")
+        # logging in mongodb, function return 200 even if logging fails
+        mongodb_logging(
+            event_data["operation"],
+            True,
+            200,
+            "Succeeded",
+            event_data["eventDetails"]["correlationId"],
+        )
+        return "200"
 
-    return "200"
+    except ee.eagle_eye_api.EagleEyeApiError as e:
+        logging.error(e)
+        mongodb_logging(
+            event_data["operation"],
+            False,
+            e.status_code,
+            e.reason,
+            event_data["eventDetails"]["correlationId"],
+        )
+        raise e
+    except Exception as e:
+        logging.error(e)
+        mongodb_logging(
+            event_data["operation"],
+            False,
+            "NA",
+            str(e),
+            event_data["eventDetails"]["correlationId"],
+        )
+        raise e
 
-def _parse_request(request):
-    '''parse the request and return the request data in jason format
-    '''
-    logging.info('Preparing data for EE request.')
-    envelope = request.get_json()
-    message = envelope['message']
-    delivery_attempt = envelope['deliveryAttempt']
-    event_data_str = base64.b64decode(message['data'])
-    event_data = json.loads(event_data_str)
-    _validate_payload_format(event_data)
-
-    logging.info('Completed preparing data for EE request.')
-    return event_data, delivery_attempt
-
-def _validate_payload_format(event_data):
-    "this function validate the message payload format againt the schema"
-    with open('message-schema.json', 'r') as file:
-        schema = json.load(file)
-    
-    jsonschema.validate(instance=event_data, schema=schema)
 
 def _prepare_consumer_payload(event_data, consumer):
+    """Get the existing memberOfferExclusions and memberPreferences
+    information from EE and update them with the event data segment information"""
 
+    empty_memberOfferExclusions = {
+        "name": "memberOfferExclusions",
+        "segments": [{"labels": ["Member Offer Exclusions"], "data": {}}],
+    }
+    empty_memberPreferences = {
+        "name": "memberPreferences",
+        "segments": [{"labels": ["Member Preferences"], "data": {}}],
+    }
     memberOfferExclusions = {}
     memberPreferences = {}
-
+    # get the current memberOfferExclusions and memberPreferences from consumer data
     if not consumer["data"]:
         pass
     else:
-        if not consumer["data"].get("segmentation"):
+        if consumer["data"].get("segmentation"):
             for segmentation in consumer["data"]["segmentation"]:
                 if segmentation["name"] == "memberOfferExclusions":
                     memberOfferExclusions = segmentation
                 elif segmentation["name"] == "memberPreferences":
                     memberPreferences = segmentation
-
-    if not memberOfferExclusions: 
-        memberOfferExclusions=  {
-                        "name": "memberOfferExclusions",
-                        "segments": [
-                            {
-                                "labels": [
-                                    "Member Offer Exclusions"
-                                ],
-                                "data": {
-                                }
-                            }
-                        ]
-                    }
+    # create empty segment payload if not exist in EE yet.
+    # ["segments"][0]["data"] is a list when it is empty, convert it to dict
+    if not memberOfferExclusions:
+        memberOfferExclusions = empty_memberOfferExclusions
+    else:
+        if not memberOfferExclusions["segments"][0]["data"]:
+            memberOfferExclusions["segments"][0]["data"] = {}
     if not memberPreferences:
-        memberPreferences = {
-                "name": "memberPreferences",
-                "segments": [
-                    {
-                        "labels": [
-                            "Member Preferences"
-                        ],
-                        "data": {
-                        }
-                    }
-                ]
-            }
+        memberPreferences = empty_memberPreferences
+    else:
+        if not memberPreferences["segments"][0]["data"]:
+            memberPreferences["segments"][0]["data"] = {}
+    # update memberOfferExclusions and memberPreferences segment with event data
+    memberOfferExclusions, memberPreferences = _update_segmentation(
+        event_data, memberOfferExclusions, memberPreferences
+    )
 
-    memberOfferExclusions, memberPreferences = _update_segmentation(event_data,memberOfferExclusions, memberPreferences)
-    
     payload = {
-                "friendlyName": "Sample Consumer",
-                "data": {
-                    "segmentation": [memberOfferExclusions,memberPreferences]}
-               }
+        "data": {"segmentation": [memberOfferExclusions, memberPreferences]},
+    }
 
     return payload
 
+
 def _update_segmentation(event_data, memberOfferExclusions, memberPreferences):
-    '''update the segment memberOfferExclusions, memberPreferences with the data from request'''
+    """update the segment memberOfferExclusions, memberPreferences with the data from request"""
     # functions to update the dict
-    memberOfferExclusions_update_func = memberOfferExclusions["segments"][0]["data"].update
+    memberOfferExclusions_update_func = memberOfferExclusions["segments"][0][
+        "data"
+    ].update
     memberOfferExclusions_pop_func = memberOfferExclusions["segments"][0]["data"].pop
     memberPreferences_update_func = memberPreferences["segments"][0]["data"].update
     memberPreferences_pop_func = memberPreferences["segments"][0]["data"].pop
 
     # this dictionary maps preference id and value to segment id, value in EE and the function used to update them
-    OP_DICT = {"1042-True": [{memberOfferExclusions_update_func:{"0047": "No Liquor Offers"}}],
-               "1042-False":[{memberOfferExclusions_pop_func: "0047"}],
-               "30101-True":[{memberPreferences_update_func: {"0033": "eReceipt - Supermarkets & Metro"}}],
-               "30101-False":[{memberPreferences_pop_func: "0033"}],
-               "30102-True":[{memberPreferences_update_func: {"0037": "eReceipt - Big W"}}],
-               "30102-False":[{memberPreferences_pop_func: "0037"}],
-               "30103-True":[{memberPreferences_update_func: {"0035": "eReceipt - BWS"}}],
-               "30103-False":[{memberPreferences_pop_func: "0035"}],
-               "39-Automatic":[{memberPreferences_pop_func: "0104"}, {memberPreferences_pop_func: "0105"}],
-               "39-QantasPoints":[{memberPreferences_update_func: {"0104": "SFL QFF"}}, {memberPreferences_pop_func: "0105"}],
-               "39-Christmas":[{memberPreferences_update_func: {"0105": "SFL Christmas"}},{memberPreferences_pop_func: "0104"}]
+    OP_DICT = {
+        "1042-True": [
+            {memberOfferExclusions_update_func: {"0047": "No Liquor Offers"}}
+        ],
+        "1042-False": [{memberOfferExclusions_pop_func: "0047"}],
+        "30101-True": [
+            {memberPreferences_update_func: {"0033": "eReceipt - Supermarkets & Metro"}}
+        ],
+        "30101-False": [{memberPreferences_pop_func: "0033"}],
+        "30102-True": [{memberPreferences_update_func: {"0037": "eReceipt - Big W"}}],
+        "30102-False": [{memberPreferences_pop_func: "0037"}],
+        "30103-True": [{memberPreferences_update_func: {"0035": "eReceipt - BWS"}}],
+        "30103-False": [{memberPreferences_pop_func: "0035"}],
+        "39-Automatic": [
+            {memberPreferences_pop_func: "0104"},
+            {memberPreferences_pop_func: "0105"},
+        ],
+        "39-QantasPoints": [
+            {memberPreferences_update_func: {"0104": "SFL QFF"}},
+            {memberPreferences_pop_func: "0105"},
+        ],
+        "39-Christmas": [
+            {memberPreferences_update_func: {"0105": "SFL Christmas"}},
+            {memberPreferences_pop_func: "0104"},
+        ],
     }
 
     for preference in event_data["eventDetails"]["profile"]["account"]["preferences"]:
         operations = OP_DICT.get(str(preference["id"]) + "-" + str(preference["value"]))
         if not operations:
-            raise RuntimeError("Incorrect preference id or value! id: "  + str(preference["id"])
-                                + "; value: " + preference["value"])
+            raise RuntimeError(
+                "Incorrect preference id or value! id: "
+                + str(preference["id"])
+                + "; value: "
+                + preference["value"]
+            )
         for op in operations:
             func = list(op.keys())[0]
             param = list(op.values())[0]
@@ -149,6 +179,4 @@ def _update_segmentation(event_data, memberOfferExclusions, memberPreferences):
             else:
                 func(param)
 
-
     return memberOfferExclusions, memberPreferences
-

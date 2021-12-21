@@ -2,6 +2,7 @@
   "$comment": "This JSON Type Definition represents the Event schema which would be used to validate the message published on data-{env}-cfp, data-{env}-accounts, data-{env}-cards PubSub Topics",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "http://dev.api-wr.com/wx/v2/member/preferences/schema/event",
+  "$version": "v20211118",
   "title": "Event",
   "description": "Event",
   "type": "object",
@@ -339,7 +340,7 @@
           "type": "object",
           "properties": {
             "accountType": {
-              "$comment": "The type of account, which can either be EDR OR SDC",
+              "$comment": "The type of account, which can either be EDR Card OR Staff Card",
               "$id": "#account_type",
               "description": "Account Type",
               "$ref": "#/definitions/accountType"
@@ -366,7 +367,7 @@
                 "$ref": "#/definitions/preference"
               }
             },
-            "cards": {
+            "cardEventDetail": {
               "$comment": "The Cards held by the Customer",
               "$id": "#cards",
               "description": "Cards",
@@ -390,7 +391,7 @@
       "type": "object",
       "properties": {
         "code": {
-          "$comment": "The code for type of account. This is 1002 for EDR and 1003 for SDC",
+          "$comment": "The code for type of account. This is 1002 for EDR Card and 1003 for Staff Card",
           "$id": "#account_type_code",
           "description": "Account Type Code",
           "enum": [
@@ -403,16 +404,16 @@
           ]
         },
         "name": {
-          "$comment": "The name for type of account. This can either be EDR or SDC",
+          "$comment": "The name for type of account. This can either be EDR Card or Staff Card",
           "$id": "#account_type_name",
           "description": "Account Type Name",
           "enum": [
-            "EDR",
-            "SDC"
+            "EDR Card",
+            "Staff Card"
           ],
           "examples": [
-            "EDR",
-            "SDC"
+            "EDR Card",
+            "Staff Card"
           ]
         }
       },
@@ -432,7 +433,7 @@
           "then": {
             "properties": {
               "name": {
-                "const": "EDR"
+                "const": "EDR Card"
               }
             }
           }
@@ -448,7 +449,7 @@
           "then": {
             "properties": {
               "name": {
-                "const": "SDC"
+                "const": "Staff Card"
               }
             }
           }
@@ -457,11 +458,11 @@
       "examples": [
         {
           "code": 1002,
-          "name": "EDR"
+          "name": "EDR Card"
         },
         {
           "code": 1003,
-          "name": "SDC"
+          "name": "Staff Card"
         }
       ]
     },
@@ -498,6 +499,22 @@
         "id",
         "name",
         "value"
+      ]
+    },
+    "cardEventDetail": {
+      "type": "object",
+      "properties": {
+        "oldCardNumber": {
+          "type": "string"
+        },
+        "cancelledCardNumber": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          
+        }
       ]
     }
   },
@@ -649,7 +666,7 @@
                     ],
                     "not": {
                       "required": [
-                        "cards"
+                        "cardEventDetail"
                       ]
                     }
                   }
@@ -679,12 +696,12 @@
                   "account": {
                     "type": "object",
                     "properties": {
-                      "cards": {
+                      "cardEventDetail": {
                         "type": "object"
                       }
                     },
                     "required": [
-                      "cards"
+                      "cardEventDetail"
                     ],
                     "not": {
                       "required": [
@@ -729,7 +746,7 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
               "preferences": [
@@ -765,7 +782,7 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
               "preferences": [
@@ -801,7 +818,7 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
               "preferences": [
@@ -837,7 +854,7 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
               "preferences": [
@@ -873,7 +890,7 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
               "preferences": [
@@ -909,7 +926,7 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
               "preferences": [
@@ -929,6 +946,35 @@
                   "value": false
                 }
               ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "RegisterAccountEvent",
+      "description": "Example of register account event message",
+      "data": {
+        "eventType": "accounts",
+        "eventSubType": "register",
+        "operation": "create",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329"
             }
           }
         }
@@ -955,10 +1001,146 @@
             "account": {
               "accountType": {
                 "code": 1002,
-                "name": "EDR"
+                "name": "EDR Card"
               },
               "cardNumber": "9355049379329",
-              "cards": {}
+              "cardEventDetail": {
+                
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "ReplaceCardsEvent",
+      "description": "Example of Replace Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "replace",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "oldCardNumber": "9355049379765",
+                "newCardNumber": "9355049379329",
+                "replacementReason": "Lost"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "CancelCardsEvent",
+      "description": "Example of Cancel Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "cancel",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "cancelledCardNumber": "9355049379329",
+                "cancellationReasonCode": "123",
+                "cancellationReasonDescription": "Unhappy",
+                "cancellationComment": "Not getting many offers",
+                "cancellationRequestDatetime": "2018-11-11T11:01:59+11:11"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "ReregisterCardsEvent",
+      "description": "Example of Reregister Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "reregister",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "newCardNumber": "9355049379329"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "DeregisterCardsEvent",
+      "description": "Example of Deregister Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "deregister",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "deregisteredCardNumber": "9355049379329"
+              }
             }
           }
         }

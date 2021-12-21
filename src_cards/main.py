@@ -31,7 +31,7 @@ def main_cards(request):
     try:
         event_data, delivery_attempt = parse_request(request)
         validate_payload(event_data, EXPECTED_EVENT_TYPE, EXPECTED_EVENT_SUB_TYPES)
-
+        logging.info("Starting the " + event_data["eventSubType"] + " card process.")
         if event_data["eventSubType"] == "replace":
             wallet = ee.wallet.get_wallet_by_identity_value(
                 event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
@@ -101,7 +101,7 @@ def main_cards(request):
                     "deregisteredCardNumber"
                 ],
             )
-
+        logging.info("Completed the " + event_data["eventSubType"] + " card process.")
         # logging in mongodb, function return 200 even if logging fails
         mongodb_logging(
             event_data["operation"],

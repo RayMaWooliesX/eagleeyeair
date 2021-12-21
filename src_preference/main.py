@@ -33,7 +33,7 @@ def main_preference(request):
     try:
         event_data, delivery_attempt = parse_request(request)
         validate_payload(event_data, EXPECTED_EVENT_TYPE)
-
+        logging.info("Starting the card preference updating process.")
         wallet = ee.wallet.get_wallet_by_identity_value(
             event_data["eventDetails"]["profile"]["crnHash"]
         )
@@ -43,6 +43,7 @@ def main_preference(request):
         ee.wallet.update_wallet_consumer(
             wallet["walletId"], consumer["consumerId"], preference_payload
         )
+        logging.info("Completed the card preference updating process.")
         # logging in mongodb, function return 200 even if logging fails
         mongodb_logging(
             event_data["operation"],

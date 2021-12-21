@@ -26,7 +26,7 @@ def main_accounts(request):
     try:
         event_data, delivery_attempt = parse_request(request)
         validate_payload(event_data, EXPECTED_EVENT_TYPE, EXPECTED_EVENT_SUB_TYPES)
-
+        logging.info("Starting the " + event_data["eventSubType"] + " account process.")
         # register account
         if event_data["eventSubType"] == "register":
             wallet_payload = _prepare_wallet_payload(event_data)
@@ -66,6 +66,7 @@ def main_accounts(request):
                     },
                 },
             )
+        logging.info("Completed the " + event_data["eventSubType"] + "account process.")
         # logging in mongodb, function return 200 even if logging fails
         mongodb_logging(
             event_data["operation"],

@@ -2,6 +2,15 @@
     "dbname",
     "mongodb"
 ],
+"editor.formatOnSave": true,
 "python.pythonPath": "",
-"python.formatting.provider": "yapf"
+"python.formatting.provider": "black",
+"filewatcher.commands": [
+    {
+        "match": "\\\\src_common\\.*",
+        "isAsync": false,
+        "cmd": "xcopy /Y ${file} c:\\Users\\1150764\\Desktop\\git\\wx-p24-loyalty-preference-ingestion-gcf\\src_preference\\ & xcopy /Y ${file} c:\\Users\\1150764\\Desktop\\git\\wx-p24-loyalty-preference-ingestion-gcf\\src_cards\\ & xcopy /Y ${file} c:\\Users\\1150764\\Desktop\\git\\wx-p24-loyalty-preference-ingestion-gcf\\src_accounts\\",
+        "event": "onFileChange"
+    }        
+],
 }

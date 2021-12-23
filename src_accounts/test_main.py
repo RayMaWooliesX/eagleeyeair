@@ -25,18 +25,14 @@ from datetime import datetime
 
 import eagleeyeair
 
-crn_register = "999-crn-account-register" + datetime.now().strftime(
-    "%d-%b-%Y (%H:%M:%S.%f)"
-)
+crn_register = "999" + datetime.now().strftime("%d%m%Y%H%M%S%f")
 crn_hash_register = hashlib.sha256(crn_register.encode("utf-8")).hexdigest()
-lcn_register = "888-lcn-account_register" + datetime.now().strftime(
-    "%d-%b-%Y (%H:%M:%S.%f)"
-)
+lcn_register = "888" + datetime.now().strftime("%d%m%Y%H%M%S%f")
 print(crn_register)
 
 
 @mock.patch(
-    "main._parse_request",
+    "main.parse_request",
     return_value=(
         {
             "eventType": "accounts",
@@ -51,7 +47,7 @@ print(crn_register)
                     "crn": crn_register,
                     "crnHash": crn_hash_register,
                     "account": {
-                        "accountType": {"code": 1002, "name": "EDR"},
+                        "accountType": {"code": 1002, "name": "EDR Card"},
                         "cardNumber": lcn_register,
                     },
                 },

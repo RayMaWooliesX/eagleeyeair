@@ -9,14 +9,26 @@ import logging
 import google.cloud.logging
 
 import eagleeyeair as ee
-from loyalty_util import mongodb_logging, parse_request, validate_payload
+from loyalty_util import (
+    mongodb_logging,
+    parse_request,
+    validate_payload,
+    create_house_hold_wallet,
+)
 
 # Instantiates a client
 client = google.cloud.logging.Client()
 client.setup_logging()
 
 EXPECTED_EVENT_TYPE = "cards"
-EXPECTED_EVENT_SUB_TYPES = {"cancel", "replace", "reregister", "deregister"}
+EXPECTED_EVENT_SUB_TYPES = {
+    "cancel",
+    "replace",
+    "reregister",
+    "deregister",
+    "link",
+    "unlink",
+}
 
 
 def main_cards(request):
@@ -101,6 +113,61 @@ def main_cards(request):
                     "deregisteredCardNumber"
                 ],
             )
+
+        if event_data["eventSubType"] == "link":
+
+            primaryCardNumber = event_data["eventDetails"]["profile"]["account"][
+                "cardEventDetail"
+            ]["primaryCardNumber"]
+            secondaryCardNumber = event_data["eventDetails"]["profile"]["account"][
+                "cardEventDetail"
+            ]["secondaryCardNumber"]
+            p_wallet = ee.wallet.get_wallet_by_identity_value(primaryCardNumber)
+            s_wallet = ee.wallet.get_wallet_by_identity_value(secondaryCardNumber)
+            if s_wallet["relationships"]["child"]:
+                raise ValueError(
+                    f"card {secondaryCardNumber} is already member of a household"
+                )
+
+            if len(p_wallet["relationships"]["child"]):
+                h_wallet_id = p_wallet["relationships"]["child"][0]
+            else:
+                h_wallet = create_house_hold_wallet(primaryCardNumber)
+                ee.wallet.create_wallet_child_relation(
+                    p_wallet["walletId"], h_wallet["walletId"]
+                )
+                h_wallet_id = h_wallet["walletId"]
+
+            ee.wallet.create_wallet_child_relation(s_wallet["walletId"], h_wallet_id)
+
+        if event_data["eventSubType"] == "unlink":
+            primaryCardNumber = event_data["eventDetails"]["profile"]["account"][
+                "cardEventDetail"
+            ]["primaryCardNumber"]
+            secondaryCardNumber = event_data["eventDetails"]["profile"]["account"][
+                "cardEventDetail"
+            ]["secondaryCardNumber"]
+            p_wallet = ee.wallet.get_wallet_by_identity_value(primaryCardNumber)
+            s_wallet = ee.wallet.get_wallet_by_identity_value(secondaryCardNumber)
+
+            if (
+                not p_wallet["relationships"]["child"]
+                or not s_wallet["relationships"]["child"]
+                or s_wallet["relationships"]["child"][0]
+                != p_wallet["relationships"]["child"][0]
+            ):
+                raise ValueError(
+                    f"{secondaryCardNumber} is not member of {primaryCardNumber}'s household"
+                )
+
+            h_wallet_id = p_wallet["relationships"]["child"][0]
+            h_wallet = ee.wallet.get_wallet_by_wallet_id(h_wallet_id)
+
+            ee.wallet.split_wallet_relation(s_wallet["walletId"], h_wallet_id)
+            if len(h_wallet["relationships"]["parent"]) == 2:
+                ee.wallet.split_wallet_relation(p_wallet["walletId"], h_wallet_id)
+                ee.wallet.delete_wallet(h_wallet_id)
+
         logging.info("Completed the " + event_data["eventSubType"] + " card process.")
         # logging in mongodb, function return 200 even if logging fails
         mongodb_logging(

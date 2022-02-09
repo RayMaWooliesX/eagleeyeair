@@ -7,6 +7,8 @@ import jsonschema
 import json
 import requests
 
+import eagleeyeair as ee
+
 MONGO_API_LOGGING_URL = os.environ["MONGO_API_LOGGING_URL"]
 SYS_NAME = "RTL"
 MONGO_API_LOGGING_CLIENT_ID = os.environ["MONGO_API_LOGGING_CLIENT_ID"]
@@ -32,9 +34,9 @@ def mongodb_logging(operation, changesUpdated, responseCode, message, correlatio
             MONGO_API_LOGGING_URL, json.dumps(data), headers=MONGO_API_LOGGING_HEADERS
         )
         if r.status_code >= 400:
-            logging.error("Mongo logging competed with  " + r.text)
+            logging.error("Mongo logging completed with  " + r.text)
         else:
-            logging.info("Mongo logging competed with  " + r.text)
+            logging.info("Mongo logging completed with  " + r.text)
 
         r.raise_for_status
         return r.status_code
@@ -76,3 +78,18 @@ def parse_request(request):
 
     logging.info("Parsed event data for EE request.")
     return event_data, delivery_attempt
+
+
+def create_house_hold_wallet(lcn: str) -> dict:
+    """
+    Create house hold wallet for given LCN
+    """
+    payload = {
+        "status": "ACTIVE",
+        "state": "EARNBURN",
+        "type": "HOUSEHOLD",
+        "friendlyName": f"HOUSEHOLD WALLET of holder {lcn}",
+        "meta": {"Primary LCN": lcn},
+    }
+    wallet = ee.wallet.create_wallet(payload)
+    return wallet

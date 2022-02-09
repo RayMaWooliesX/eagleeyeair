@@ -1,5 +1,12 @@
 import os
 
+os.environ["EES_AUTH_CLIENT_ID"] = "u2v2hsh07xvju1eex8eh"
+os.environ["EES_AUTH_CLIENT_SECRET"] = "tplzi3t8v6okghbrrhts0644dep5ns"
+os.environ["EES_API_PREFIX"] = "/2.0"
+os.environ["EES_POS_API_HOST"] = "pos.sandbox.uk.eagleeye.com"
+os.environ["EES_RESOURCES_API_HOST"] = "resources.sandbox.uk.eagleeye.com"
+os.environ["EES_WALLET_API_HOST"] = "wallet.sandbox.uk.eagleeye.com"
+
 os.environ[
     "MONGO_API_LOGGING_URL"
 ] = "https://apigee-test.api-wr.com/wx/v2/member/preferences/mongo"

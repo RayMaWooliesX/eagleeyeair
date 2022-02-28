@@ -4,3 +4,4 @@ htmlcov/
 __pycache__/
 .coverage
 customer_preference_load.py
+.pytest_cache/

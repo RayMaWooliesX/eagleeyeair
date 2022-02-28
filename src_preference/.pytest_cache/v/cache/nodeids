@@ -1,0 +1,7 @@
+[
+  "test_loyalty_util.py::test_logging",
+  "test_main.py::test_main_preference",
+  "test_main.py::test_update_segmentation",
+  "test_main.py::test_update_segmentation_liquor",
+  "test_main.py::test_update_segmentation_unsubscribe_all"
+]

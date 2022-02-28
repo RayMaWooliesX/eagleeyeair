@@ -90,6 +90,11 @@ try:
     )
     eagleeyeair.wallet.suspend_wallet("115205634")
 
+    # split the walllets for link test case
+    # eagleeyeair.wallet.split_wallet_relation(128193334, 128193370)
+    # eagleeyeair.wallet.split_wallet_relation(128193338, 128193370)
+
+
 except Exception as e:
     print(e)
 
@@ -225,6 +230,7 @@ def test_main_cards_reregister(mock_parse_request):
     assert main.main_cards(data) == "200"
 
 
+"""
 @mock.patch(
     "main.parse_request",
     return_value=(
@@ -254,6 +260,87 @@ def test_main_cards_reregister(mock_parse_request):
     ),
 )
 def test_main_cards_deregister(mock_parse_request):
+    data = {
+        "deliveryAttempt": 1,
+        "message": {},
+        "subscription": "projects/gcp-wow-rwds-etl-dev/subscriptions/data-dev-p24-partner-loyalty-api-sub",
+    }
+    req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+
+    assert main.main_cards(data) == "200"
+"""
+
+
+@mock.patch(
+    "main.parse_request",
+    return_value=(
+        {
+            "eventType": "cards",
+            "eventSubType": "link",
+            "operation": "update",
+            "eventDetails": {
+                "source": {"code": 1, "name": "CPORTAL"},
+                "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+                "publishedAt": "2018-11-11T11:01:59+11:11",
+                "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+                "profile": {
+                    "crn": "777082022140258367737",
+                    "crnHash": "d5a69f10552071da51c7c61a391f06a7a01420ca213a57d95927110d6ddb828d",
+                    "account": {
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "666082022140258367737",
+                        "cardEventDetail": {
+                            "primaryCardNumber": "666082022140258367737",
+                            "secondaryCardNumber": "666082022140248219742",
+                        },
+                    },
+                },
+            },
+        },
+        1,
+    ),
+)
+def test_main_cards_link(mock_parse_request):
+    data = {
+        "deliveryAttempt": 1,
+        "message": {},
+        "subscription": "projects/gcp-wow-rwds-etl-dev/subscriptions/data-dev-p24-partner-loyalty-api-sub",
+    }
+    req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+
+    assert main.main_cards(data) == "200"
+
+
+@mock.patch(
+    "main.parse_request",
+    return_value=(
+        {
+            "eventType": "cards",
+            "eventSubType": "unlink",
+            "operation": "update",
+            "eventDetails": {
+                "source": {"code": 1, "name": "CPORTAL"},
+                "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+                "publishedAt": "2018-11-11T11:01:59+11:11",
+                "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+                "profile": {
+                    "crn": "3300000000034535748",
+                    "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+                    "account": {
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "9355049379329",
+                        "cardEventDetail": {
+                            "primaryCardNumber": "666082022140258367737",
+                            "secondaryCardNumber": "666082022140248219742",
+                        },
+                    },
+                },
+            },
+        },
+        1,
+    ),
+)
+def test_main_cards_unlink(mock_parse_request):
     data = {
         "deliveryAttempt": 1,
         "message": {},

@@ -4,8 +4,7 @@ This Cloud function is responsible for:
 - Preparing data for the EE API calls.
 - Calling EE APIs to update preference
 """
-
-import datetime
+import os
 import logging
 
 import google.cloud.logging
@@ -34,8 +33,13 @@ def main_preference(request):
         event_data, delivery_attempt = parse_request(request)
         validate_payload(event_data, EXPECTED_EVENT_TYPE)
         logging.info("Starting the card preference updating process.")
+        logging.info("Integration Id: " + event_data["eventDetails"]["correlationId"])
+        logging.info("delivery attemp: " + str(delivery_attempt))
+
+        logging.info(os.environ["EES_WALLET_API_HOST"])
+
         wallet = ee.wallet.get_wallet_by_identity_value(
-            event_data["eventDetails"]["profile"]["crnHash"]
+            event_data["eventDetails"]["profile"]["crn"]
         )
         consumer = ee.wallet.get_wallet_consumer(wallet["walletId"])
         preference_payload = _prepare_consumer_payload(event_data, consumer)
@@ -65,11 +69,11 @@ def main_preference(request):
         )
         raise e
     except Exception as e:
-        logging.error(e)
+        logging.info(e)
         mongodb_logging(
             event_data["operation"],
             False,
-            "NA",
+            400,
             str(e),
             event_data["eventDetails"]["correlationId"],
         )
@@ -140,6 +144,9 @@ def _update_segmentation(event_data, memberOfferExclusions, memberPreferences):
             {memberOfferExclusions_update_func: {"0047": "No Liquor Offers"}}
         ],
         "1042-False": [{memberOfferExclusions_pop_func: "0047"}],
+        # unsubscribe all
+        "1024-True": [{memberOfferExclusions_pop_func: "0047"}],
+        "1024-False": [{lambda *args: None: "0047"}],
         "30101-True": [
             {memberPreferences_update_func: {"0033": "eReceipt - Supermarkets & Metro"}}
         ],

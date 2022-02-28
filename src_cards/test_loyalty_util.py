@@ -6,7 +6,6 @@ os.environ["EES_API_PREFIX"] = "/2.0"
 os.environ["EES_POS_API_HOST"] = "pos.sandbox.uk.eagleeye.com"
 os.environ["EES_RESOURCES_API_HOST"] = "resources.sandbox.uk.eagleeye.com"
 os.environ["EES_WALLET_API_HOST"] = "wallet.sandbox.uk.eagleeye.com"
-
 os.environ[
     "MONGO_API_LOGGING_URL"
 ] = "https://apigee-test.api-wr.com/wx/v2/member/preferences/mongo"

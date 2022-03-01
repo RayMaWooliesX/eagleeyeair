@@ -1,1208 +1,1122 @@
 {
-	"$comment": "This JSON Type Definition represents the Event schema which would be used to validate the message published on data-{env}-cfp, data-{env}-accounts, data-{env}-cards PubSub Topics",
-	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "http://dev.api-wr.com/wx/v2/member/preferences/schema/event",
-	"$version": "v20220207",
-	"title": "Event",
-	"description": "Event",
-	"type": "object",
-	"properties": {
-		"eventType": {
-			"$comment": "The eventType signifies the type of event. This would enable the consumers to know what this message is about. The values can be preferences, accounts, cards or transactions",
-			"$id": "#event_type",
-			"description": "Event type",
-			"enum": [
-				"preferences",
-				"accounts",
-				"cards"
-			],
-			"examples": [
-				"preferences",
-				"accounts",
-				"cards"
-			]
-		},
-		"eventSubType": {
-			"$comment": "The eventSubType signifies the sub-type for the eventType. This would hold unique values for different type of eventTypes.",
-			"$id": "#event_sub_type",
-			"description": "Event sub-type",
-			"type": "string",
-			"examples": [
-				"communication",
-				"liquor",
-				"redemption",
-				"ereceipt",
-				"register",
-				"close",
-				"replace",
-				"cancel",
-				"reregister",
-				"deregister",
-				"link",
-				"unlink"
-			]
-		},
-		"operation": {
-			"$comment": "The operation signifies the action because of which event has occurred. This can hold any value from create, update or delete",
-			"$id": "#operation",
-			"description": "Operation",
-			"enum": [
-				"create",
-				"update",
-				"delete"
-			],
-			"examples": [
-				"create",
-				"update",
-				"delete"
-			]
-		},
-		"eventDetails": {
-			"$comment": "The eventDetails signifies the details of the event. The consumers may use the data from eventDetails.",
-			"$id": "#event_details",
-			"description": "Event Details",
-			"type": "object",
-			"properties": {
-				"source": {
-					"$comment": "The system from where this event originated.",
-					"$id": "#source",
-					"description": "Source",
-					"$ref": "#/definitions/source"
-				},
-				"trackingId": {
-					"$comment": "The trackingId is passed as a parameter by the Caller Apps and is an UUID",
-					"$id": "#tracking_id",
-					"description": "Tracking Id",
-					"type": "string",
-					"minLength": 1,
-					"pattern": "^([a-z]|[A-Z]|[0-9]|[-]){36}$",
-					"examples": [
-						"d11f3621-b480-47b4-9ba2-69e6588bfeea",
-						"1b671a64-40d5-491e-99b0-da01ff1f3341",
-						"a8ee6a90-ccbc-4678-8230-a4a65fbf7004"
-					]
-				},
-				"correlationId": {
-					"$comment": "The correlationId is generated within Preferences v2.0 API and is an UUID. Since we are not always sure if trackingId would be passed uniquely by the calling apps, we generate it and pass it through",
-					"$id": "#correlation_id",
-					"description": "Correlation Id",
-					"type": "string",
-					"minLength": 1,
-					"pattern": "^([a-z]|[A-Z]|[0-9]|[-]){36}$",
-					"examples": [
-						"d11f3621-b480-47b4-9ba2-69e6588bfeea",
-						"1b671a64-40d5-491e-99b0-da01ff1f3341",
-						"a8ee6a90-ccbc-4678-8230-a4a65fbf7004"
-					]
-				},
-				"publishedAt": {
-					"$comment": "The datetime when the message was published",
-					"$id": "#published_at",
-					"description": "Published At",
-					"type": "string",
-					"pattern": "^((19|20)[0-9][0-9])[-](0[1-9]|1[012])[-](0[1-9]|[12][0-9]|3[01])[T]([01][1-9]|[2][0-3])[:]([0-5][0-9])[:]([0-5][0-9])([+|-]([01][0-9]|[2][0-3])[:]([0-5][0-9])){0,1}$",
-					"minLength": 1,
-					"examples": [
-						"2018-11-11T11:01:59+11:11",
-						"2020-04-01T20:20:39+00:00"
-					]
-				},
-				"profile": {
-					"$comment": "The profile belongs to a Customer",
-					"$id": "#profile",
-					"description": "Profile",
-					"$ref": "#/definitions/profile"
-				}
-			},
-			"required": [
-				"source",
-				"correlationId",
-				"publishedAt",
-				"profile"
-			]
-		}
-	},
-	"definitions": {
-		"source": {
-			"type": "object",
-			"properties": {
-				"code": {
-					"$comment": "The code for the system as stored in CDP",
-					"$id": "#source_code",
-					"description": "Source Code",
-					"type": "number",
-					"minimum": 1,
-					"maximum": 100,
-					"examples": [
-						1,
-						2,
-						13,
-						91,
-						92,
-						6,
-						16
-					]
-				},
-				"name": {
-					"$comment": "The name of the system as stored in CDP",
-					"$id": "#source_name",
-					"description": "Source Name",
-					"type": "string",
-					"minLength": 1,
-					"pattern": "^[^0-9]+$",
-					"examples": [
-						"CPORTAL",
-						"SPORTAL",
-						"Rewards Hub",
-						"Rewards App",
-						"SFMC",
-						"SCVAPI",
-						"Other"
-					]
-				}
-			},
-			"allOf": [{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 1
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "CPORTAL"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 2
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "SPORTAL"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 13
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "Rewards Hub"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 91
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "Rewards App"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 92
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "SFMC"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 6
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "SCVAPI"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 16
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "Other"
-							}
-						}
-					}
-				}
-			],
-			"required": [
-				"code",
-				"name"
-			],
-			"additionalProperties": false,
-			"examples": [{
-					"code": 1,
-					"name": "CPORTAL"
-				},
-				{
-					"code": 2,
-					"name": "SPORTAL"
-				},
-				{
-					"code": 13,
-					"name": "Rewards Hub"
-				},
-				{
-					"code": 91,
-					"name": "Rewards App"
-				},
-				{
-					"code": 92,
-					"name": "SFMC"
-				},
-				{
-					"code": 6,
-					"name": "SCVAPI"
-				},
-				{
-					"code": 16,
-					"name": "Other"
-				}
-			]
-		},
-		"profile": {
-			"type": "object",
-			"properties": {
-				"crn": {
-					"$comment": "Customer Reference Number",
-					"$id": "#crn",
-					"description": "CRN",
-					"type": "string",
-					"minLength": 1,
-					"pattern": "^[0-9]*$",
-					"examples": [
-						"3300000000034535748"
-					]
-				},
-				"crnHash": {
-					"$comment": "The hash value of CRN. This is SHA256 HEX'ed value of the CRN",
-					"$id": "#crn_hash",
-					"description": "CRN Hash",
-					"type": "string",
-					"minLength": 1,
-					"examples": [
-						"7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185"
-					]
-				},
-				"account": {
-					"$comment": "The account belongs to a customer profile",
-					"$id": "#account",
-					"description": "Account",
-					"type": "object",
-					"properties": {
-						"accountType": {
-							"$comment": "The type of account, which can either be EDR Card OR Staff Card",
-							"$id": "#account_type",
-							"description": "Account Type",
-							"$ref": "#/definitions/accountType"
-						},
-						"cardNumber": {
-							"$comment": "The customer's card number",
-							"$id": "#card_number",
-							"description": "Card Number",
-							"type": "string",
-							"minLength": 13,
-							"pattern": "^[0-9]*$",
-							"examples": [
-								"9355049379329",
-								"9355049371234"
-							]
-						},
-						"preferences": {
-							"$comment": "The Customer Preferences",
-							"$id": "#preferences",
-							"description": "Preferences",
-							"type": "array",
-							"minItems": 1,
-							"items": {
-								"$ref": "#/definitions/preference"
-							}
-						},
-						"cardEventDetail": {
-							"$comment": "The Cards held by the Customer",
-							"$id": "#cards",
-							"description": "Cards",
-							"type": "object"
-						}
-					},
-					"required": [
-						"accountType",
-						"cardNumber"
-					]
-				}
-			},
-			"required": [
-				"crn",
-				"crnHash",
-				"account"
-			],
-			"additionalProperties": false
-		},
-		"accountType": {
-			"type": "object",
-			"properties": {
-				"code": {
-					"$comment": "The code for type of account. This is 1002 for EDR Card and 1003 for Staff Card",
-					"$id": "#account_type_code",
-					"description": "Account Type Code",
-					"enum": [
-						1002,
-						1003
-					],
-					"examples": [
-						1002,
-						1003
-					]
-				},
-				"name": {
-					"$comment": "The name for type of account. This can either be EDR Card or Staff Card",
-					"$id": "#account_type_name",
-					"description": "Account Type Name",
-					"enum": [
-						"EDR Card",
-						"Staff Card"
-					],
-					"examples": [
-						"EDR Card",
-						"Staff Card"
-					]
-				}
-			},
-			"required": [
-				"code",
-				"name"
-			],
-			"allOf": [{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 1002
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "EDR Card"
-							}
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"code": {
-								"const": 1003
-							}
-						}
-					},
-					"then": {
-						"properties": {
-							"name": {
-								"const": "Staff Card"
-							}
-						}
-					}
-				}
-			],
-			"examples": [{
-					"code": 1002,
-					"name": "EDR Card"
-				},
-				{
-					"code": 1003,
-					"name": "Staff Card"
-				}
-			]
-		},
-		"preference": {
-			"type": "object",
-			"properties": {
-				"id": {
-					"$comment": "The id of the preference, as in CDP",
-					"description": "Preference Id",
-					"type": "number",
-					"minimum": 1,
-					"maximum": 100000
-				},
-				"name": {
-					"$comment": "The name of the preference, as in CDP",
-					"description": "Preference Name",
-					"type": "string",
-					"minLength": 1
-				},
-				"value": {
-					"$comment": "The value of the preference, as in CDP.",
-					"description": "Preference Value",
-					"anyOf": [{
-							"type": "string"
-						},
-						{
-							"type": "boolean"
-						}
-					]
-				}
-			},
-			"required": [
-				"id",
-				"name",
-				"value"
-			]
-		},
-		"cardEventDetail": {
-			"type": "object",
-			"properties": {
-				"oldCardNumber": {
-					"type": "string"
-				},
-				"cancelledCardNumber": {
-					"type": "string"
-				}
-			},
-			"allOf": [{
-
-			}]
-		}
-	},
-	"allOf": [{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "preferences"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"eventSubType": {
-						"enum": [
-							"communication",
-							"liquor",
-							"redemption",
-							"ereceipt"
-						]
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "accounts"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"eventSubType": {
-						"enum": [
-							"register",
-							"close"
-						]
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "cards"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"eventSubType": {
-						"enum": [
-							"replace",
-							"cancel",
-							"reregister",
-							"deregister",
-							"link",
-							"unlink"
-						]
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "preferences"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"operation": {
-						"enum": [
-							"create",
-							"update"
-						]
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "accounts"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"operation": {
-						"enum": [
-							"create",
-							"delete"
-						]
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "cards"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"operation": {
-						"enum": [
-							"create",
-							"update",
-							"delete"
-						]
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "preferences"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"eventDetails": {
-						"type": "object",
-						"properties": {
-							"profile": {
-								"type": "object",
-								"properties": {
-									"account": {
-										"type": "object",
-										"properties": {
-											"preferences": {
-												"type": "array"
-											}
-										},
-										"required": [
-											"preferences"
-										],
-										"not": {
-											"required": [
-												"cardEventDetail"
-											]
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"if": {
-				"properties": {
-					"eventType": {
-						"const": "cards"
-					}
-				}
-			},
-			"then": {
-				"properties": {
-					"eventDetails": {
-						"type": "object",
-						"properties": {
-							"profile": {
-								"type": "object",
-								"properties": {
-									"account": {
-										"type": "object",
-										"properties": {
-											"cardEventDetail": {
-												"type": "object"
-											}
-										},
-										"required": [
-											"cardEventDetail"
-										],
-										"not": {
-											"required": [
-												"preferences"
-											]
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	],
-	"required": [
-		"eventType",
-		"eventSubType",
-		"operation",
-		"eventDetails"
-	],
-	"additionalProperties": false,
-	"examples": [{
-			"name": "GenericPreferencesEvent",
-			"description": "Example of generic preferences event message",
-			"data": {
-				"eventType": "preferences",
-				"eventSubType": "communication",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"preferences": [{
-								"id": 1024,
-								"name": "Unsubscribe All",
-								"value": true
-							}]
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "LiquorPreferencesEvent",
-			"description": "Example of Liquor preferences event message",
-			"data": {
-				"eventType": "preferences",
-				"eventSubType": "liquor",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"preferences": [{
-								"id": 1042,
-								"name": "Liquor offers and promotions",
-								"value": true
-							}, {
-								"id": 1024,
-								"name": "Unsubscribe All",
-								"value": true
-							}]
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "AutomaticRedemptionPreferencesEvent",
-			"description": "Example of Automatic Redemption preferences event message",
-			"data": {
-				"eventType": "preferences",
-				"eventSubType": "redemption",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"preferences": [{
-								"id": 39,
-								"name": "Save for later",
-								"value": "Automatic"
-							}]
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "ChristmasRedemptionPreferencesEvent",
-			"description": "Example of Christmas Redemption preferences event message",
-			"data": {
-				"eventType": "preferences",
-				"eventSubType": "redemption",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"preferences": [{
-								"id": 39,
-								"name": "Save for later",
-								"value": "Christmas"
-							}]
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "QantasPointsRedemptionPreferencesEvent",
-			"description": "Example of Qantas Points Redemption preferences event message",
-			"data": {
-				"eventType": "preferences",
-				"eventSubType": "redemption",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"preferences": [{
-								"id": 39,
-								"name": "Save for later",
-								"value": "QantasPoints"
-							}]
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "EreceiptPreferencesEvent",
-			"description": "Example of eReceipt Preferences event message",
-			"data": {
-				"eventType": "preferences",
-				"eventSubType": "ereceipt",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"preferences": [{
-									"id": 30101,
-									"name": "Woolworths",
-									"value": true
-								},
-								{
-									"id": 30102,
-									"name": "BigW",
-									"value": false
-								},
-								{
-									"id": 30103,
-									"name": "BWS",
-									"value": false
-								}
-							]
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "RegisterAccountEvent",
-			"description": "Example of register account event message",
-			"data": {
-				"eventType": "accounts",
-				"eventSubType": "register",
-				"operation": "create",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "GenericCardsEvent",
-			"description": "Example of generic Cards event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "deregister",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "ReplaceCardsEvent",
-			"description": "Example of Replace Card event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "replace",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-								"oldCardNumber": "9355049379765",
-								"newCardNumber": "9355049379329",
-								"replacementReason": "Lost"
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "CancelCardsEvent",
-			"description": "Example of Cancel Card event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "cancel",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-								"cancelledCardNumber": "9355049379329",
-								"cancellationReasonCode": "123",
-								"cancellationReasonDescription": "Unhappy",
-								"cancellationComment": "Not getting many offers",
-								"cancellationRequestDatetime": "2018-11-11T11:01:59+11:11"
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "ReregisterCardsEvent",
-			"description": "Example of Reregister Card event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "reregister",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-								"newCardNumber": "9355049379329"
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "DeregisterCardsEvent",
-			"description": "Example of Deregister Card event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "deregister",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-								"deregisteredCardNumber": "9355049379329"
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "LinkCardEvent",
-			"description": "Example of Link Card event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "link",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-								"primaryCardNumber": "9355049379329",
-								"secondaryCardNumber": "9355049377363"
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"name": "UnlinkCardEvent",
-			"description": "Example of Unlink Card event message",
-			"data": {
-				"eventType": "cards",
-				"eventSubType": "unlink",
-				"operation": "update",
-				"eventDetails": {
-					"source": {
-						"code": 1,
-						"name": "CPORTAL"
-					},
-					"trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
-					"publishedAt": "2018-11-11T11:01:59+11:11",
-					"correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
-					"profile": {
-						"crn": "3300000000034535748",
-						"crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
-						"account": {
-							"accountType": {
-								"code": 1002,
-								"name": "EDR Card"
-							},
-							"cardNumber": "9355049379329",
-							"cardEventDetail": {
-								"primaryCardNumber": "9355049379329",
-								"secondaryCardNumber": "935504937676"
-
-							}
-						}
-					}
-				}
-			}
-		}
-	]
+  "$comment": "This JSON Type Definition represents the Event schema which would be used to validate the message published on data-{env}-cfp, data-{env}-accounts, data-{env}-cards PubSub Topics",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://dev.api-wr.com/wx/v2/member/preferences/schema/event",
+  "$version": "v20220207",
+  "title": "Event",
+  "description": "Event",
+  "type": "object",
+  "properties": {
+    "eventType": {
+      "$comment": "The eventType signifies the type of event. This would enable the consumers to know what this message is about. The values can be preferences, accounts, cards or transactions",
+      "$id": "#event_type",
+      "description": "Event type",
+      "enum": ["preferences", "accounts", "cards"],
+      "examples": ["preferences", "accounts", "cards"]
+    },
+    "eventSubType": {
+      "$comment": "The eventSubType signifies the sub-type for the eventType. This would hold unique values for different type of eventTypes.",
+      "$id": "#event_sub_type",
+      "description": "Event sub-type",
+      "type": "string",
+      "examples": [
+        "communication",
+        "liquor",
+        "redemption",
+        "ereceipt",
+        "register",
+        "close",
+        "replace",
+        "cancel",
+        "reregister",
+        "deregister",
+        "link",
+        "unlink"
+      ]
+    },
+    "operation": {
+      "$comment": "The operation signifies the action because of which event has occurred. This can hold any value from create, update or delete",
+      "$id": "#operation",
+      "description": "Operation",
+      "enum": ["create", "update", "delete"],
+      "examples": ["create", "update", "delete"]
+    },
+    "eventDetails": {
+      "$comment": "The eventDetails signifies the details of the event. The consumers may use the data from eventDetails.",
+      "$id": "#event_details",
+      "description": "Event Details",
+      "type": "object",
+      "properties": {
+        "source": {
+          "$comment": "The system from where this event originated.",
+          "$id": "#source",
+          "description": "Source",
+          "$ref": "#/definitions/source"
+        },
+        "trackingId": {
+          "$comment": "The trackingId is passed as a parameter by the Caller Apps and is an UUID",
+          "$id": "#tracking_id",
+          "description": "Tracking Id",
+          "type": "string",
+          "pattern": "^([a-z]|[A-Z]|[0-9]|[-]){36}$",
+          "examples": [
+            "d11f3621-b480-47b4-9ba2-69e6588bfeea",
+            "1b671a64-40d5-491e-99b0-da01ff1f3341",
+            "a8ee6a90-ccbc-4678-8230-a4a65fbf7004"
+          ]
+        },
+        "correlationId": {
+          "$comment": "The correlationId is generated within Preferences v2.0 API and is an UUID. Since we are not always sure if trackingId would be passed uniquely by the calling apps, we generate it and pass it through",
+          "$id": "#correlation_id",
+          "description": "Correlation Id",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^([a-z]|[A-Z]|[0-9]|[-]){36}$",
+          "examples": [
+            "d11f3621-b480-47b4-9ba2-69e6588bfeea",
+            "1b671a64-40d5-491e-99b0-da01ff1f3341",
+            "a8ee6a90-ccbc-4678-8230-a4a65fbf7004"
+          ]
+        },
+        "publishedAt": {
+          "$comment": "The datetime when the message was published",
+          "$id": "#published_at",
+          "description": "Published At",
+          "type": "string",
+          "pattern": "^((19|20)[0-9][0-9])[-](0[1-9]|1[012])[-](0[1-9]|[12][0-9]|3[01])[T]([01][1-9]|[2][0-3])[:]([0-5][0-9])[:]([0-5][0-9])([+|-]([01][0-9]|[2][0-3])[:]([0-5][0-9])){0,1}$",
+          "minLength": 1,
+          "examples": ["2018-11-11T11:01:59+11:11", "2020-04-01T20:20:39+00:00"]
+        },
+        "profile": {
+          "$comment": "The profile belongs to a Customer",
+          "$id": "#profile",
+          "description": "Profile",
+          "$ref": "#/definitions/profile"
+        }
+      },
+      "required": ["source", "correlationId", "publishedAt", "profile"]
+    }
+  },
+  "definitions": {
+    "source": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$comment": "The code for the system as stored in CDP",
+          "$id": "#source_code",
+          "description": "Source Code",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100,
+          "examples": [1, 2, 13, 91, 92, 6, 16]
+        },
+        "name": {
+          "$comment": "The name of the system as stored in CDP",
+          "$id": "#source_name",
+          "description": "Source Name",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^0-9]+$",
+          "examples": [
+            "CPORTAL",
+            "SPORTAL",
+            "Rewards Hub",
+            "Rewards App",
+            "SFMC",
+            "SCVAPI",
+            "Other"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 1
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "CPORTAL"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 2
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "SPORTAL"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 13
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "Rewards Hub"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 91
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "Rewards App"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 92
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "SFMC"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 6
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "SCVAPI"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 16
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "Other"
+              }
+            }
+          }
+        }
+      ],
+      "required": ["code", "name"],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "code": 1,
+          "name": "CPORTAL"
+        },
+        {
+          "code": 2,
+          "name": "SPORTAL"
+        },
+        {
+          "code": 13,
+          "name": "Rewards Hub"
+        },
+        {
+          "code": 91,
+          "name": "Rewards App"
+        },
+        {
+          "code": 92,
+          "name": "SFMC"
+        },
+        {
+          "code": 6,
+          "name": "SCVAPI"
+        },
+        {
+          "code": 16,
+          "name": "Other"
+        }
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "crn": {
+          "$comment": "Customer Reference Number",
+          "$id": "#crn",
+          "description": "CRN",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9]*$",
+          "examples": ["3300000000034535748"]
+        },
+        "crnHash": {
+          "$comment": "The hash value of CRN. This is SHA256 HEX'ed value of the CRN",
+          "$id": "#crn_hash",
+          "description": "CRN Hash",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185"
+          ]
+        },
+        "account": {
+          "$comment": "The account belongs to a customer profile",
+          "$id": "#account",
+          "description": "Account",
+          "type": "object",
+          "properties": {
+            "accountType": {
+              "$comment": "The type of account, which can either be EDR Card OR Staff Card",
+              "$id": "#account_type",
+              "description": "Account Type",
+              "$ref": "#/definitions/accountType"
+            },
+            "cardNumber": {
+              "$comment": "The customer's card number",
+              "$id": "#card_number",
+              "description": "Card Number",
+              "type": "string",
+              "minLength": 13,
+              "pattern": "^[0-9]*$",
+              "examples": ["9355049379329", "9355049371234"]
+            },
+            "preferences": {
+              "$comment": "The Customer Preferences",
+              "$id": "#preferences",
+              "description": "Preferences",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/preference"
+              }
+            },
+            "cardEventDetail": {
+              "$comment": "The Cards held by the Customer",
+              "$id": "#cards",
+              "description": "Cards",
+              "type": "object"
+            }
+          },
+          "required": ["accountType", "cardNumber"]
+        }
+      },
+      "required": ["crn", "crnHash", "account"],
+      "additionalProperties": false
+    },
+    "accountType": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$comment": "The code for type of account. This is 1002 for EDR Card and 1003 for Staff Card",
+          "$id": "#account_type_code",
+          "description": "Account Type Code",
+          "enum": [1002, 1003],
+          "examples": [1002, 1003]
+        },
+        "name": {
+          "$comment": "The name for type of account. This can either be EDR Card or Staff Card",
+          "$id": "#account_type_name",
+          "description": "Account Type Name",
+          "enum": ["EDR Card", "Staff Card"],
+          "examples": ["EDR Card", "Staff Card"]
+        }
+      },
+      "required": ["code", "name"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 1002
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "EDR Card"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": 1003
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "const": "Staff Card"
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "code": 1002,
+          "name": "EDR Card"
+        },
+        {
+          "code": 1003,
+          "name": "Staff Card"
+        }
+      ]
+    },
+    "preference": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$comment": "The id of the preference, as in CDP",
+          "description": "Preference Id",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "name": {
+          "$comment": "The name of the preference, as in CDP",
+          "description": "Preference Name",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "$comment": "The value of the preference, as in CDP.",
+          "description": "Preference Value",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "required": ["id", "name", "value"]
+    },
+    "cardEventDetail": {
+      "type": "object",
+      "properties": {
+        "oldCardNumber": {
+          "type": "string"
+        },
+        "cancelledCardNumber": {
+          "type": "string"
+        }
+      },
+      "allOf": [{}]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "preferences"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "eventSubType": {
+            "enum": ["communication", "liquor", "redemption", "ereceipt"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "accounts"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "eventSubType": {
+            "enum": ["register", "close"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "cards"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "eventSubType": {
+            "enum": [
+              "replace",
+              "cancel",
+              "reregister",
+              "deregister",
+              "link",
+              "unlink"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "preferences"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "operation": {
+            "enum": ["create", "update"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "accounts"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "operation": {
+            "enum": ["create", "delete"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "cards"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "operation": {
+            "enum": ["create", "update", "delete"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "preferences"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "eventDetails": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "account": {
+                    "type": "object",
+                    "properties": {
+                      "preferences": {
+                        "type": "array"
+                      }
+                    },
+                    "required": ["preferences"],
+                    "not": {
+                      "required": ["cardEventDetail"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "cards"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "eventDetails": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "account": {
+                    "type": "object",
+                    "properties": {
+                      "cardEventDetail": {
+                        "type": "object"
+                      }
+                    },
+                    "required": ["cardEventDetail"],
+                    "not": {
+                      "required": ["preferences"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "required": ["eventType", "eventSubType", "operation", "eventDetails"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "name": "GenericPreferencesEvent",
+      "description": "Example of generic preferences event message",
+      "data": {
+        "eventType": "preferences",
+        "eventSubType": "communication",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "preferences": [
+                {
+                  "id": 1024,
+                  "name": "Unsubscribe All",
+                  "value": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "LiquorPreferencesEvent",
+      "description": "Example of Liquor preferences event message",
+      "data": {
+        "eventType": "preferences",
+        "eventSubType": "liquor",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "preferences": [
+                {
+                  "id": 1042,
+                  "name": "Liquor offers and promotions",
+                  "value": true
+                },
+                {
+                  "id": 1024,
+                  "name": "Unsubscribe All",
+                  "value": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "AutomaticRedemptionPreferencesEvent",
+      "description": "Example of Automatic Redemption preferences event message",
+      "data": {
+        "eventType": "preferences",
+        "eventSubType": "redemption",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "preferences": [
+                {
+                  "id": 39,
+                  "name": "Save for later",
+                  "value": "Automatic"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "ChristmasRedemptionPreferencesEvent",
+      "description": "Example of Christmas Redemption preferences event message",
+      "data": {
+        "eventType": "preferences",
+        "eventSubType": "redemption",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "preferences": [
+                {
+                  "id": 39,
+                  "name": "Save for later",
+                  "value": "Christmas"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "QantasPointsRedemptionPreferencesEvent",
+      "description": "Example of Qantas Points Redemption preferences event message",
+      "data": {
+        "eventType": "preferences",
+        "eventSubType": "redemption",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "preferences": [
+                {
+                  "id": 39,
+                  "name": "Save for later",
+                  "value": "QantasPoints"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "EreceiptPreferencesEvent",
+      "description": "Example of eReceipt Preferences event message",
+      "data": {
+        "eventType": "preferences",
+        "eventSubType": "ereceipt",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "preferences": [
+                {
+                  "id": 30101,
+                  "name": "Woolworths",
+                  "value": true
+                },
+                {
+                  "id": 30102,
+                  "name": "BigW",
+                  "value": false
+                },
+                {
+                  "id": 30103,
+                  "name": "BWS",
+                  "value": false
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "RegisterAccountEvent",
+      "description": "Example of register account event message",
+      "data": {
+        "eventType": "accounts",
+        "eventSubType": "register",
+        "operation": "create",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GenericCardsEvent",
+      "description": "Example of generic Cards event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "deregister",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "ReplaceCardsEvent",
+      "description": "Example of Replace Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "replace",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "oldCardNumber": "9355049379765",
+                "newCardNumber": "9355049379329",
+                "replacementReason": "Lost"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "CancelCardsEvent",
+      "description": "Example of Cancel Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "cancel",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "cancelledCardNumber": "9355049379329",
+                "cancellationReasonCode": "123",
+                "cancellationReasonDescription": "Unhappy",
+                "cancellationComment": "Not getting many offers",
+                "cancellationRequestDatetime": "2018-11-11T11:01:59+11:11"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "ReregisterCardsEvent",
+      "description": "Example of Reregister Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "reregister",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "newCardNumber": "9355049379329"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "DeregisterCardsEvent",
+      "description": "Example of Deregister Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "deregister",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "deregisteredCardNumber": "9355049379329"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "LinkCardEvent",
+      "description": "Example of Link Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "link",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "primaryCardNumber": "9355049379329",
+                "secondaryCardNumber": "9355049377363"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "UnlinkCardEvent",
+      "description": "Example of Unlink Card event message",
+      "data": {
+        "eventType": "cards",
+        "eventSubType": "unlink",
+        "operation": "update",
+        "eventDetails": {
+          "source": {
+            "code": 1,
+            "name": "CPORTAL"
+          },
+          "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+          "publishedAt": "2018-11-11T11:01:59+11:11",
+          "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+          "profile": {
+            "crn": "3300000000034535748",
+            "crnHash": "7a30398d3e11bfecb7c9e7b014adfgdfg6463c768cc35b942d6ec44af66f185",
+            "account": {
+              "accountType": {
+                "code": 1002,
+                "name": "EDR Card"
+              },
+              "cardNumber": "9355049379329",
+              "cardEventDetail": {
+                "primaryCardNumber": "9355049379329",
+                "secondaryCardNumber": "935504937676"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -108,7 +108,6 @@ except Exception as e:
             "operation": "update",
             "eventDetails": {
                 "source": {"code": 1, "name": "CPORTAL"},
-                "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {

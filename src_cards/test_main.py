@@ -7,15 +7,33 @@ os.environ["EES_POS_API_HOST"] = "pos.sandbox.uk.eagleeye.com"
 os.environ["EES_RESOURCES_API_HOST"] = "resources.sandbox.uk.eagleeye.com"
 os.environ["EES_WALLET_API_HOST"] = "wallet.sandbox.uk.eagleeye.com"
 
+import hashlib
 from unittest import mock
 from datetime import datetime
 
 import eagleeyeair
 import main
+import loyalty_util
 
 try:
     # set up data for cancel
     eagleeyeair.wallet.update_wallet_identity_status_active("115103065", "88581976")
+except Exception as e:
+    print(e)
+try:
+    eagleeyeair.wallet.update_wallet_identity_status_active("128982941", "102948081")
+except Exception as e:
+    print(e)
+try:
+    eagleeyeair.wallet.update_wallet_identity_status_active("128983011", "102948221")
+except Exception as e:
+    print(e)
+try:
+    eagleeyeair.wallet.update_wallet_identity_status_active("128983050", "102948300")
+except Exception as e:
+    print(e)
+try:
+    "", "", ""
     eagleeyeair.wallet.update_wallet_consumer(
         "115103065",
         "18092294",
@@ -81,22 +99,299 @@ try:
             },
         },
     )
+except Exception as e:
+    print(e)
+try:
     # set up data for replace
     eagleeyeair.wallet.update_wallet_identity_status_active("115205616", "88682691")
-
+except Exception as e:
+    print(e)
+try:
     # set the wallet and identity status/state for reregister
     eagleeyeair.wallet.update_wallet_state(
         wallet_id="115205634", data={"state": "CLOSED"}
     )
-    eagleeyeair.wallet.suspend_wallet("115205634")
-
-    # split the walllets for link test case
-    # eagleeyeair.wallet.split_wallet_relation(128193334, 128193370)
-    # eagleeyeair.wallet.split_wallet_relation(128193338, 128193370)
-
-
 except Exception as e:
     print(e)
+try:
+    eagleeyeair.wallet.suspend_wallet("115205634")
+except Exception as e:
+    print(e)
+
+
+# preparing data for deregister
+# card to be deregister
+crn_deregister = "777" + datetime.now().strftime("%d%Y%H%m%S%f")
+crn_hash_deregister = hashlib.sha256(crn_deregister.encode("utf-8")).hexdigest()
+lcn_deregister = "666" + datetime.now().strftime("%d%Y%H%m%S%f")
+print("crn_deregister: ", crn_deregister)
+print("lcn_deregister: ", lcn_deregister)
+wallet_deregister = eagleeyeair.wallet.create_wallet_and_wallet_identities(
+    {
+        "state": "EARNBURN",
+        "status": "ACTIVE",
+        "type": "MEMBER",
+        "friendlyName": "Test Wallet",
+        "identities": [
+            {
+                "type": "LCN",
+                "friendlyName": "Loyalty Card Number",
+                "value": lcn_deregister,
+                "status": "ACTIVE",
+                "state": "REGISTERED",
+                "meta": {"registered": "app"},
+            },
+            {
+                "type": "CRN",
+                "friendlyName": "Customer Referenence Number",
+                "value": crn_deregister,
+            },
+            {
+                "type": "HASH_CRN",
+                "friendlyName": "Hashed Customer Referenence Number",
+                "value": crn_hash_deregister,
+            },
+        ],
+        "meta": {"sample": "metadata", "key": "value"},
+    }
+)
+print(wallet_deregister)
+consumer_deregister = eagleeyeair.wallet.create_wallet_consumer(
+    wallet_deregister["walletId"],
+    {
+        "friendlyName": "Sample Consumer",
+        "type": "DEFAULT",
+        "data": {
+            "dimension": [
+                {"label": "customerType", "value": "1002"},
+                {"label": "noLiquorOffers", "value": False},
+                {"label": "preferredStoreNumber", "value": "1800"},
+                {"label": "redemptionSetting", "value": "Automatic Saving"},
+                {"label": "staffDivisionCode", "value": "1005"},
+            ]
+        },
+    },
+)
+print(consumer_deregister)
+# card to be linked to the deregistered card
+crn_deregister_link = "77" + datetime.now().strftime("%d%Y%H%m%S%f")
+crn_hash_deregister_link = hashlib.sha256(
+    crn_deregister_link.encode("utf-8")
+).hexdigest()
+lcn_deregister_link = "66" + datetime.now().strftime("%d%Y%H%m%S%f")
+print("crn_deregister_link: ", crn_deregister_link)
+print("lcn_deregister_link: ", lcn_deregister_link)
+wallet_deregister_link = eagleeyeair.wallet.create_wallet_and_wallet_identities(
+    {
+        "state": "EARNBURN",
+        "status": "ACTIVE",
+        "type": "MEMBER",
+        "friendlyName": "Test Wallet",
+        "identities": [
+            {
+                "type": "LCN",
+                "friendlyName": "Loyalty Card Number",
+                "value": lcn_deregister_link,
+                "status": "ACTIVE",
+                "state": "REGISTERED",
+                "meta": {"registered": "app"},
+            },
+            {
+                "type": "CRN",
+                "friendlyName": "Customer Referenence Number",
+                "value": crn_deregister_link,
+            },
+            {
+                "type": "HASH_CRN",
+                "friendlyName": "Hashed Customer Referenence Number",
+                "value": crn_hash_deregister_link,
+            },
+        ],
+        "meta": {"sample": "metadata", "key": "value"},
+    }
+)
+print(wallet_deregister_link)
+consumer_deregister_link = eagleeyeair.wallet.create_wallet_consumer(
+    wallet_deregister_link["walletId"],
+    {
+        "friendlyName": "Sample Consumer",
+        "type": "DEFAULT",
+        "data": {
+            "dimension": [
+                {"label": "customerType", "value": "1002"},
+                {"label": "noLiquorOffers", "value": False},
+                {"label": "preferredStoreNumber", "value": "1800"},
+                {"label": "redemptionSetting", "value": "Automatic Saving"},
+                {"label": "staffDivisionCode", "value": "1005"},
+            ]
+        },
+    },
+)
+print(consumer_deregister_link)
+
+loyalty_util.link_cards(lcn_deregister, lcn_deregister_link)
+
+
+@mock.patch(
+    "main.parse_request",
+    return_value=(
+        {
+            "eventType": "cards",
+            "eventSubType": "link",
+            "operation": "update",
+            "eventDetails": {
+                "source": {"code": 1, "name": "CPORTAL"},
+                "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+                "publishedAt": "2018-11-11T11:01:59+11:11",
+                "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+                "profile": {
+                    "crn": "999152021161217433918",
+                    "crnHash": "dd5d9273336cecfe867653f4e720c5642363128b4c176ed31cb3a64c922184a0",
+                    "account": {
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888152021161217433918",
+                        "cardEventDetail": {
+                            "primaryCardNumber": "888152021161217433918",
+                            "secondaryCardNumber": "666112022100336460831",
+                        },
+                    },
+                },
+            },
+        },
+        1,
+    ),
+)
+def test_main_cards_link_for_cancel_1(mock_parse_request):
+    data = {
+        "deliveryAttempt": 1,
+        "message": {},
+        "subscription": "projects/gcp-wow-rwds-etl-dev/subscriptions/data-dev-p24-partner-loyalty-api-sub",
+    }
+    req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+
+    assert main.main_cards(data) == "200"
+
+
+@mock.patch(
+    "main.parse_request",
+    return_value=(
+        {
+            "eventType": "cards",
+            "eventSubType": "link",
+            "operation": "update",
+            "eventDetails": {
+                "source": {"code": 1, "name": "CPORTAL"},
+                "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+                "publishedAt": "2018-11-11T11:01:59+11:11",
+                "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+                "profile": {
+                    "crn": "999152021161217433918",
+                    "crnHash": "dd5d9273336cecfe867653f4e720c5642363128b4c176ed31cb3a64c922184a0",
+                    "account": {
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888152021161217433918",
+                        "cardEventDetail": {
+                            "primaryCardNumber": "888152021161217433918",
+                            "secondaryCardNumber": "666112022100304641892",
+                        },
+                    },
+                },
+            },
+        },
+        1,
+    ),
+)
+def test_main_cards_link_for_cancel_2(mock_parse_request):
+    data = {
+        "deliveryAttempt": 1,
+        "message": {},
+        "subscription": "projects/gcp-wow-rwds-etl-dev/subscriptions/data-dev-p24-partner-loyalty-api-sub",
+    }
+    req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+
+    assert main.main_cards(data) == "200"
+
+
+@mock.patch(
+    "main.parse_request",
+    return_value=(
+        {
+            "eventType": "cards",
+            "eventSubType": "link",
+            "operation": "update",
+            "eventDetails": {
+                "source": {"code": 1, "name": "CPORTAL"},
+                "trackingId": "1b671a64-40d5-491e-99b0-da01ff1f3341",
+                "publishedAt": "2018-11-11T11:01:59+11:11",
+                "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+                "profile": {
+                    "crn": "999152021161217433918",
+                    "crnHash": "dd5d9273336cecfe867653f4e720c5642363128b4c176ed31cb3a64c922184a0",
+                    "account": {
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "888152021161217433918",
+                        "cardEventDetail": {
+                            "primaryCardNumber": "888152021161217433918",
+                            "secondaryCardNumber": "666112022100309075178",
+                        },
+                    },
+                },
+            },
+        },
+        1,
+    ),
+)
+def test_main_cards_link_for_cancel_3(mock_parse_request):
+    data = {
+        "deliveryAttempt": 1,
+        "message": {},
+        "subscription": "projects/gcp-wow-rwds-etl-dev/subscriptions/data-dev-p24-partner-loyalty-api-sub",
+    }
+    req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+
+    assert main.main_cards(data) == "200"
+
+
+@mock.patch(
+    "main.parse_request",
+    return_value=(
+        {
+            "eventType": "cards",
+            "eventSubType": "cancel",
+            "operation": "update",
+            "eventDetails": {
+                "source": {"code": 1, "name": "CPORTAL"},
+                "publishedAt": "2018-11-11T11:01:59+11:11",
+                "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
+                "profile": {
+                    "crn": "777112022100336459231",
+                    "crnHash": "e1da6f2b8fc7c27292d0012393b29a9c5623e867848de513c044f82de4b2ed65",
+                    "account": {
+                        "accountType": {"code": 1002, "name": "EDR Card"},
+                        "cardNumber": "666112022100336460831",
+                        "cardEventDetail": {
+                            "cancelledCardNumber": "666112022100336460831",
+                            "cancellationReasonCode": "123",
+                            "cancellationReasonDescription": "LOST",
+                            "cancellationComment": "Not getting many offers",
+                            "cancellationRequestDatetime": "2018-11-11T11:01:59+11:11",
+                        },
+                    },
+                },
+            },
+        },
+        1,
+    ),
+)
+def test_main_cards_cancel_secondary(mock_parse_request):
+    data = {
+        "deliveryAttempt": 1,
+        "message": {},
+        "subscription": "projects/gcp-wow-rwds-etl-dev/subscriptions/data-dev-p24-partner-loyalty-api-sub",
+    }
+    req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+
+    assert main.main_cards(data) == "200"
 
 
 @mock.patch(
@@ -130,7 +425,7 @@ except Exception as e:
         1,
     ),
 )
-def test_main_cards_cancel(mock_parse_request):
+def test_main_cards_cancel_primary(mock_parse_request):
     data = {
         "deliveryAttempt": 1,
         "message": {},
@@ -202,11 +497,11 @@ def test_main_cards_replace(mock_parse_request):
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {
-                    "crn": "999162021091245926065",
-                    "crnHash": "b3fda621058bfdae3322d8110fbfca1966294dc94b7fc001339986c7670bae4a",
+                    "crn": "777112022100309075178",
+                    "crnHash": "387055aaf088b1c5c5825edc91f474fe488da31b5e555c19f509c573c334a616",
                     "account": {
                         "accountType": {"code": 1002, "name": "EDR Card"},
-                        "cardNumber": "888162021091245926065",
+                        "cardNumber": "666112022100309075178",
                         "cardEventDetail": {
                             "newCardNumber": "888162021091245926065-reregister"
                             + datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
@@ -229,7 +524,6 @@ def test_main_cards_reregister(mock_parse_request):
     assert main.main_cards(data) == "200"
 
 
-"""
 @mock.patch(
     "main.parse_request",
     return_value=(
@@ -243,14 +537,12 @@ def test_main_cards_reregister(mock_parse_request):
                 "publishedAt": "2018-11-11T11:01:59+11:11",
                 "correlationId": "a8ee6a90-ccbc-4678-8230-a4a65fbf7004",
                 "profile": {
-                    "crn": "999162021111200990217",
-                    "crnHash": "fc1304e481f4f49aaa74aecf9eb7473a694e118c4c53a3a36098547947bcc31a",
+                    "crn": crn_deregister,
+                    "crnHash": crn_hash_deregister,
                     "account": {
                         "accountType": {"code": 1002, "name": "EDR Card"},
-                        "cardNumber": "888162021111200990217",
-                        "cardEventDetail": {
-                            "deregisteredCardNumber": "888162021111200990217"
-                        },
+                        "cardNumber": lcn_deregister,
+                        "cardEventDetail": {"deregisteredCardNumber": lcn_deregister},
                     },
                 },
             },
@@ -267,7 +559,6 @@ def test_main_cards_deregister(mock_parse_request):
     req = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
 
     assert main.main_cards(data) == "200"
-"""
 
 
 @mock.patch(

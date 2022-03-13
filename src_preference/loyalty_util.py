@@ -2,6 +2,9 @@ import os
 import logging
 from datetime import datetime
 import base64
+from re import L
+from typing import Tuple
+from xmlrpc.client import boolean
 
 import jsonschema
 import json
@@ -93,3 +96,91 @@ def create_house_hold_wallet(lcn: str) -> dict:
     }
     wallet = ee.wallet.create_wallet(payload)
     return wallet
+
+
+def is_in_household(card_number: str) -> tuple:
+    """
+    returns:
+           is in household flag
+           wallet of the card
+    """
+    wallet = ee.wallet.get_wallet_by_identity_value(card_number)
+    return (True, wallet) if len(wallet["relationships"]["child"]) else (False, wallet)
+
+
+def is_household_primary_card(card_number: str) -> tuple:
+    """
+    return values: one of the flags: {NO_IN_HOUSEHOLD, PRIMARY, SECONDARY}
+                   primary card wallet
+                   house hold wallet
+    """
+    in_household, wallet = is_in_household(card_number)
+
+    if not in_household:
+        return ("NO_IN_HOUSEHOLD", wallet, {})
+    h_wallet_id = wallet["relationships"]["child"][0]
+    h_wallet = ee.wallet.get_wallet_by_wallet_id(h_wallet_id)
+
+    return (
+        ("PRIMARY", wallet, h_wallet)
+        if h_wallet["meta"]["primary lcn"] == card_number
+        else ("SECONDARY", wallet, h_wallet)
+    )
+
+
+def dismantle_household_wallet(h_wallet):
+    for child_wallet_id in h_wallet["relationships"]["parent"]:
+        ee.wallet.split_wallet_relation(child_wallet_id, h_wallet["walletId"])
+    ee.wallet.delete_wallet(h_wallet["walletId"])
+
+
+def link_cards(primary_card: str, secondary_card: str):
+    in_household, s_wallet = is_in_household(secondary_card)
+    if in_household:
+        raise ValueError(f"card {secondary_card} is already member of a household")
+
+    is_primary_card, p_wallet, h_wallet = is_household_primary_card(primary_card)
+    if is_primary_card == "SECONDARY":
+        raise ValueError(
+            f"{primary_card} is not a primary card but a secondary card of a household"
+        )
+    elif is_primary_card == "NO_IN_HOUSEHOLD":
+        h_wallet = create_house_hold_wallet(primary_card)
+        ee.wallet.create_wallet_child_relation(
+            p_wallet["walletId"], h_wallet["walletId"]
+        )
+        logging.info(
+            "Primary card is not in any household wallet. New household wallet is created."
+        )
+    ee.wallet.create_wallet_child_relation(s_wallet["walletId"], h_wallet["walletId"])
+    logging.info("Cards are linked successfully.")
+
+
+def unlink_cards(primary_card: str, secondary_card: str):
+    in_household, s_wallet = is_in_household(secondary_card)
+    if not in_household:
+        raise ValueError(
+            f"card {secondary_card} does not belong to any household wallet."
+        )
+
+    is_primary_card, p_wallet, h_wallet = is_household_primary_card(primary_card)
+    if is_primary_card == "SECONDARY":
+        raise ValueError(
+            f"{primary_card} is not a primary card but a secondary card of a household"
+        )
+    elif is_primary_card == "NO_IN_HOUSEHOLD":
+        raise ValueError(
+            f"card {secondary_card} does not belong to any household wallet."
+        )
+
+    if p_wallet["relationships"]["child"][0] != s_wallet["relationships"]["child"][0]:
+        raise ValueError(
+            f"card {primary_card} and {secondary_card} are not in the same household wallet."
+        )
+    h_wallet_id = h_wallet["walletId"]
+    ee.wallet.split_wallet_relation(s_wallet["walletId"], h_wallet_id)
+    if len(h_wallet["relationships"]["parent"]) == 2:
+        ee.wallet.split_wallet_relation(p_wallet["walletId"], h_wallet_id)
+        ee.wallet.delete_wallet(h_wallet_id)
+        logging.info("Deleted household wallet, since it only has one child left.")
+    logging.info("Completed unlinking card.")

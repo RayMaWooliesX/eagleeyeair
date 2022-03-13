@@ -13,8 +13,12 @@ from loyalty_util import (
     mongodb_logging,
     parse_request,
     validate_payload,
-    create_house_hold_wallet,
+    unlink_cards,
+    link_cards,
+    dismantle_household_wallet,
+    is_household_primary_card,
 )
+
 
 # Instantiates a client
 client = google.cloud.logging.Client()
@@ -44,6 +48,7 @@ def main_cards(request):
         event_data, delivery_attempt = parse_request(request)
         validate_payload(event_data, EXPECTED_EVENT_TYPE, EXPECTED_EVENT_SUB_TYPES)
         logging.info("Starting the " + event_data["eventSubType"] + " card process.")
+        logging.info("CorrelationId: " + event_data["eventDetails"]["correlationId"])
         if event_data["eventSubType"] == "replace":
             wallet = ee.wallet.get_wallet_by_identity_value(
                 event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
@@ -69,17 +74,15 @@ def main_cards(request):
             )
 
         if event_data["eventSubType"] == "cancel":
-            wallet = ee.wallet.get_wallet_by_identity_value(
-                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
-                    "cancelledCardNumber"
-                ]
-            )
+            cancel_card_num = event_data["eventDetails"]["profile"]["account"][
+                "cardEventDetail"
+            ]["cancelledCardNumber"]
+            is_primary, wallet, h_wallet = is_household_primary_card(cancel_card_num)
+            _unlink_before_cancel_deregister(is_primary, wallet, h_wallet)
             # cancel the card
             _cancel_card(
                 wallet["walletId"],
-                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
-                    "cancelledCardNumber"
-                ],
+                cancel_card_num,
                 event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
                     "cancellationReasonDescription"
                 ].upper(),
@@ -99,46 +102,28 @@ def main_cards(request):
             _add_edr_registered_card_segment(wallet["walletId"])
 
         if event_data["eventSubType"] == "deregister":
-            wallet = ee.wallet.get_wallet_by_identity_value(
-                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
-                    "deregisteredCardNumber"
-                ]
+            deregister_card_num = event_data["eventDetails"]["profile"]["account"][
+                "cardEventDetail"
+            ]["deregisteredCardNumber"]
+            is_primary, wallet, h_wallet = is_household_primary_card(
+                deregister_card_num
             )
-
+            _unlink_before_cancel_deregister(is_primary, wallet, h_wallet)
             _deregister_card(
                 wallet["walletId"],
                 event_data["eventDetails"]["profile"]["crn"],
                 event_data["eventDetails"]["profile"]["crnHash"],
-                event_data["eventDetails"]["profile"]["account"]["cardEventDetail"][
-                    "deregisteredCardNumber"
-                ],
+                deregister_card_num,
             )
 
         if event_data["eventSubType"] == "link":
-
             primaryCardNumber = event_data["eventDetails"]["profile"]["account"][
                 "cardEventDetail"
             ]["primaryCardNumber"]
             secondaryCardNumber = event_data["eventDetails"]["profile"]["account"][
                 "cardEventDetail"
             ]["secondaryCardNumber"]
-            p_wallet = ee.wallet.get_wallet_by_identity_value(primaryCardNumber)
-            s_wallet = ee.wallet.get_wallet_by_identity_value(secondaryCardNumber)
-            if s_wallet["relationships"]["child"]:
-                raise ValueError(
-                    f"card {secondaryCardNumber} is already member of a household"
-                )
-
-            if len(p_wallet["relationships"]["child"]):
-                h_wallet_id = p_wallet["relationships"]["child"][0]
-            else:
-                h_wallet = create_house_hold_wallet(primaryCardNumber)
-                ee.wallet.create_wallet_child_relation(
-                    p_wallet["walletId"], h_wallet["walletId"]
-                )
-                h_wallet_id = h_wallet["walletId"]
-
-            ee.wallet.create_wallet_child_relation(s_wallet["walletId"], h_wallet_id)
+            link_cards(primaryCardNumber, secondaryCardNumber)
 
         if event_data["eventSubType"] == "unlink":
             primaryCardNumber = event_data["eventDetails"]["profile"]["account"][
@@ -147,26 +132,7 @@ def main_cards(request):
             secondaryCardNumber = event_data["eventDetails"]["profile"]["account"][
                 "cardEventDetail"
             ]["secondaryCardNumber"]
-            p_wallet = ee.wallet.get_wallet_by_identity_value(primaryCardNumber)
-            s_wallet = ee.wallet.get_wallet_by_identity_value(secondaryCardNumber)
-
-            if (
-                not p_wallet["relationships"]["child"]
-                or not s_wallet["relationships"]["child"]
-                or s_wallet["relationships"]["child"][0]
-                != p_wallet["relationships"]["child"][0]
-            ):
-                raise ValueError(
-                    f"{secondaryCardNumber} is not member of {primaryCardNumber}'s household"
-                )
-
-            h_wallet_id = p_wallet["relationships"]["child"][0]
-            h_wallet = ee.wallet.get_wallet_by_wallet_id(h_wallet_id)
-
-            ee.wallet.split_wallet_relation(s_wallet["walletId"], h_wallet_id)
-            if len(h_wallet["relationships"]["parent"]) == 2:
-                ee.wallet.split_wallet_relation(p_wallet["walletId"], h_wallet_id)
-                ee.wallet.delete_wallet(h_wallet_id)
+            unlink_cards(primaryCardNumber, secondaryCardNumber)
 
         logging.info("Completed the " + event_data["eventSubType"] + " card process.")
         # logging in mongodb, function return 200 even if logging fails
@@ -258,7 +224,8 @@ def _remove_edr_registered_card_segment(wallet_id):
     memberOfferTarget = _get_memberOfferTarget_segment(consumer)
 
     if memberOfferTarget != {}:
-        memberOfferTarget["segments"][0]["data"].pop("0101")
+        if memberOfferTarget["segments"][0]["data"]:
+            memberOfferTarget["segments"][0]["data"].pop("0101", None)
 
         ee.wallet.update_wallet_consumer(
             wallet_id,
@@ -357,3 +324,11 @@ def _get_wallet_identity_id(identities, identity_value, identity_type):
         )
 
     return identity_id
+
+
+def _unlink_before_cancel_deregister(is_primary, wallet, h_wallet):
+    # unlink wallet
+    if is_primary == "SECONDARY":
+        ee.wallet.split_wallet_relation(wallet["walletId"], h_wallet["walletId"])
+    elif is_primary == "PRIMARY":
+        dismantle_household_wallet(h_wallet)
